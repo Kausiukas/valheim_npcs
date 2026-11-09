@@ -1,0 +1,19 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# C# Source Code
+*.cs text diff=csharp
+*.sln text merge=union
+*.csproj text merge=union
+*.props text
+
+# Mark documentation, HTML codex suites, and generator tools as documentation
+# This ensures GitHub displays C# as ~100% of the repository's codebase
+docs/** linguist-documentation
+tools/** linguist-documentation
+*.html linguist-documentation
+*.pdf binary
+*.png binary
+*.otf binary
+*.ttf binary
+*.ico binary

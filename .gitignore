@@ -1,0 +1,38 @@
+# ==========================================
+# Build Artifacts & IDE Caches
+# ==========================================
+[Bb]in/
+[Oo]bj/
+[Aa]pp[Dd]ata/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+.idea/
+.claude/
+__pycache__/
+*.py[cod]
+
+# ==========================================
+# Large External Binary Assets (>100MB Blocker)
+# ==========================================
+board_game_rules/
+ValheimWorkers/board_game_rules/
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# ==========================================
+# Temporary Renders & Scratch Files
+# ==========================================
+stone_p*.png
+stone_page_*.png
+variation_*
+docs/font_samples/
+docs/font_variations*
+*.log
+Launch_Valheim_Modded.exe
+test_prep.py
