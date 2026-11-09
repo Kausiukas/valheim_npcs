@@ -1,0 +1,3610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ValheimWorkers - Live Console Synced Verification Dashboard</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  
+  <script>
+    // Initialize theme immediately to prevent any flicker
+    (function() {
+      const savedTheme = localStorage.getItem("ValheimWorkers_Theme") || "dark";
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      } else if (savedTheme === "light") {
+        document.documentElement.classList.add("light");
+        document.documentElement.classList.remove("dark");
+      } else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.add("light");
+        }
+      }
+    })();
+  </script>
+
+  <style>
+    /* Theme definitions for standalone & explicit mode switching */
+    html.dark {
+      --background: #0a0e17;
+      --card: #111827;
+      --border: #1f293d;
+      --foreground: #f3f4f6;
+      --muted-foreground: #9ca3af;
+      --primary: #38bdf8;
+      --primary-foreground: #0a0e17;
+      --secondary: #1e293b;
+      --secondary-foreground: #f3f4f6;
+      --accent: #1e293b;
+      --placeholder: #6b7280;
+    }
+
+    html.light {
+      --background: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --foreground: #0f172a;
+      --muted-foreground: #64748b;
+      --primary: #0284c7;
+      --primary-foreground: #ffffff;
+      --secondary: #f1f5f9;
+      --secondary-foreground: #0f172a;
+      --accent: #f1f5f9;
+      --placeholder: #94a3b8;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--background, rgba(0,0,0,0.1));
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border, rgba(120,120,120,0.3));
+      border-radius: 3px;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.92); }
+    }
+    .animate-pulse-dot {
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6 font-sans transition-colors duration-200">
+
+  <div class="max-w-5xl mx-auto space-y-5">
+
+    <!-- Header Card -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 md:p-6 shadow-sm space-y-4 transition-colors">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap mb-1.5">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Milestones 1–5 Built & Deployed (v1.3.0)
+            </span>
+            <span id="syncStatusPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse-dot"></span>
+              <span id="syncStatusText">Waiting for Valheim Console (127.0.0.1:18788)...</span>
+            </span>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+            ValheimWorkers Interactive Test & Console Sync Suite
+          </h1>
+          <p class="text-sm text-[var(--muted-foreground)] mt-1">
+            Automatically records in-game condition checks, worker actions, and console exceptions while you play.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <!-- Dark / Light / Auto Theme Switcher -->
+          <div class="flex items-center bg-[var(--background)] border border-[var(--border)] rounded-xl p-1 text-xs self-start sm:self-auto">
+            <button id="themeDarkBtn" onclick="setTheme('dark')" title="Dark Mode" class="px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition">
+              <span>🌙</span> Dark
+            </button>
+            <button id="themeLightBtn" onclick="setTheme('light')" title="Light Mode" class="px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition">
+              <span>☀️</span> Light
+            </button>
+            <button id="themeAutoBtn" onclick="setTheme('auto')" title="Follow System / Host Theme" class="px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition">
+              <span>💻</span> Auto
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="resetAllBtn" onclick="resetAllTests()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center gap-1.5 shadow-sm">
+              <span>🔄</span> Clean Restart (0%)
+            </button>
+            <button id="exportReportBtn" onclick="exportMarkdownReport()" class="px-3.5 py-2 text-xs font-medium rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition flex items-center gap-1.5 shadow-sm">
+              <span>📋</span> Copy Report
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Telemetry Control Strip -->
+      <div class="pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-center gap-1.5">
+            <span class="text-[var(--muted-foreground)]">Active Workers:</span>
+            <span id="liveWorkerCount" class="font-bold text-[var(--foreground)]">0</span>
+          </div>
+          <div class="px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-center gap-1.5">
+            <span class="text-[var(--muted-foreground)]">Console Auto-Verified:</span>
+            <span id="liveAutoVerifiedCount" class="font-bold text-emerald-400">0 / 117</span>
+          </div>
+          <div id="liveErrorPill" class="px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-center gap-1.5">
+            <span class="text-[var(--muted-foreground)]">Runtime Errors:</span>
+            <span id="liveErrorCount" class="font-bold text-emerald-400">0</span>
+          </div>
+          <div class="text-[var(--muted-foreground)]" id="lastSyncTimestamp">
+            Last sync: Never
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="manualSyncBtn" onclick="manualSyncConsole()" class="px-3 py-1 rounded-lg border border-sky-500/40 bg-sky-500/10 text-sky-400 font-semibold hover:bg-sky-500/20 active:scale-95 transition flex items-center gap-1.5 shadow-sm" title="Manually ping Valheim on 127.0.0.1:18788 and refresh telemetry">
+            <span id="manualSyncIcon">🔄</span> <span id="manualSyncLabel">Sync Console Now</span>
+          </button>
+          <button id="autoPassToggleBtn" onclick="toggleAutoPass()" class="px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-medium transition flex items-center gap-1.5">
+            <span>⚡</span> <span id="autoPassLabel">Auto-Pass on Console Proof: ON</span>
+          </button>
+          <label class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer transition flex items-center gap-1" title="Load verification_telemetry.json manually if needed">
+            <span>📂</span> Load JSON
+            <input type="file" accept=".json" onchange="handleManualJsonUpload(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <!-- Metrics & Progress Overview Bar -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <div class="text-xs font-medium text-[var(--muted-foreground)]">Total Tests</div>
+        <div id="statTotal" class="text-2xl font-bold text-[var(--foreground)] mt-1">117</div>
+        <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Across 13 modules</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <div class="text-xs font-medium text-emerald-400">Passed</div>
+        <div id="statPassed" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+        <div id="statPercent" class="text-xs text-[var(--muted-foreground)] mt-0.5">0% complete</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <div class="text-xs font-medium text-rose-400">Failed / Bugs</div>
+        <div id="statFailed" class="text-2xl font-bold text-rose-400 mt-1">0</div>
+        <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Manual or error flags</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <div class="text-xs font-medium text-[var(--muted-foreground)]">Untested</div>
+        <div id="statUntested" class="text-2xl font-bold text-[var(--muted-foreground)] mt-1">117</div>
+        <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Awaiting verification</div>
+      </div>
+    </section>
+
+    <!-- Real-Time Re-Verification Guide Banner -->
+    <div class="bg-[var(--card)] border border-emerald-500/30 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs bg-gradient-to-r from-emerald-500/5 to-transparent">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">⚡</span>
+        <div>
+          <div class="font-bold text-[var(--foreground)] text-sm flex items-center gap-2">
+            <span>Real-Time Verification Workflow</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Live Sync Ready</span>
+          </div>
+          <div class="text-[var(--muted-foreground)] mt-0.5">
+            Click <b>Clean Restart (0%)</b> to reset all cards. In Valheim, open <b>F8 Settlement Hall -> Tab 3: Proving Grounds</b> and click any 1-Click Scenario to watch cards flip green live in real time!
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+        <button onclick="resetAllTests()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center gap-1.5 shadow-sm">
+          <span>🔄</span> Clean Restart (0%)
+        </button>
+      </div>
+    </div>
+
+    <!-- Overall Progress Bar -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm space-y-2">
+      <div class="flex justify-between items-center text-xs">
+        <span class="font-medium text-[var(--foreground)]">Testing Progress</span>
+        <span id="progressBarLabel" class="font-semibold text-emerald-400">0 / 43 Verified</span>
+      </div>
+      <div class="w-full bg-[var(--background)] h-2.5 rounded-full overflow-hidden border border-[var(--border)]">
+        <div id="progressBarFill" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- Live Valheim Console & Error Stream (Collapsible) -->
+    <details id="consoleStreamDetails" open class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm text-sm group">
+      <summary class="font-semibold cursor-pointer flex items-center justify-between text-[var(--foreground)]">
+        <span class="flex items-center gap-2">
+          <span>🖥️</span> Live Valheim Console & Exception Feed
+          <span id="consoleFeedCountBadge" class="px-2 py-0.5 text-xs rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">0 entries</span>
+        </span>
+        <span class="text-xs text-[var(--muted-foreground)] group-open:rotate-180 transition-transform">▼</span>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-[var(--border)] space-y-2.5">
+        <div class="flex items-center justify-between gap-2 flex-wrap text-xs">
+          <div class="flex items-center gap-1.5">
+            <button onclick="setConsoleFilter('all')" id="conFilterAll" class="px-2.5 py-1 rounded-md font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
+              All Console Activity
+            </button>
+            <button onclick="setConsoleFilter('verify')" id="conFilterVerify" class="px-2.5 py-1 rounded-md font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              ✓ Checklist Triggers Only
+            </button>
+            <button onclick="setConsoleFilter('errors')" id="conFilterErrors" class="px-2.5 py-1 rounded-md font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              ⚠️ Errors & Exceptions Only
+            </button>
+          </div>
+          <span class="text-[var(--muted-foreground)] font-mono">F5 Console Cmds: <code class="text-emerald-400">workers_verify_status</code> | <code class="text-emerald-400">workers_verify_pass &lt;id&gt;</code> | <code class="text-emerald-400">workers_verify_reset</code></span>
+        </div>
+
+        <div id="consoleFeedBox" class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3 h-44 overflow-y-auto font-mono text-xs space-y-1">
+          <div class="text-[var(--muted-foreground)]">Waiting for Valheim game session... Launch Valheim and perform actions or run F8 Proving Grounds scenarios to see live logs and auto-verification here.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- 🎯 Live NPC Command & Action Tracker (Collapsible) -->
+    <details id="npcTrackerDetails" open class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm text-sm group">
+      <summary class="font-semibold cursor-pointer flex items-center justify-between text-[var(--foreground)]">
+        <span class="flex items-center gap-2">
+          <span>🎯</span> Live NPC Command & Action Tracker
+          <span id="trackerStatsBadge" class="px-2 py-0.5 text-xs rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">0 active workers • 0 recorded traces</span>
+        </span>
+        <span class="text-xs text-[var(--muted-foreground)] group-open:rotate-180 transition-transform">▼</span>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-[var(--border)] space-y-4">
+        <!-- Section 1: Active Workers Live State Cards -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+              <span>👥</span> Active Workers Live Snapshot
+            </span>
+            <span class="text-[11px] text-[var(--muted-foreground)] font-mono">Real-time AI decisions, health & gear</span>
+          </div>
+          <div id="activeWorkersContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="text-[var(--muted-foreground)] text-xs col-span-full bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+              No workers currently active in game session. Spawn or hire workers in Valheim to see live status cards here.
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Command & Action Timeline Traces -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center gap-1.5">
+              <span>📜</span> Chronological Command & Action Traces
+            </span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">Click trace to expand full step timeline</span>
+          </div>
+          <div id="commandTracesContainer" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <div class="text-[var(--muted-foreground)] text-xs bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+              No commands recorded yet. Issue orders (Follow [E], Roster F8, Give Items, Proving Grounds) to record chronological action steps.
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Quick Console / Controls Cheat Sheet (Collapsible) -->
+    <details class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm text-sm group">
+      <summary class="font-semibold cursor-pointer flex items-center justify-between text-[var(--foreground)]">
+        <span class="flex items-center gap-2">
+          <span>⚡</span> In-Game Test Controls & Console Commands Cheat Sheet
+        </span>
+        <span class="text-xs text-[var(--muted-foreground)] group-open:rotate-180 transition-transform">▼</span>
+      </summary>
+      <div class="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div>
+          <div class="font-semibold text-[var(--foreground)] mb-1">Keybindings & Interactions:</div>
+          <ul class="space-y-1 text-[var(--muted-foreground)] list-disc list-inside">
+            <li><kbd class="px-1.5 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">F8</kbd> : Toggle Settlement Hall Roster GUI</li>
+            <li><kbd class="px-1.5 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">E</kbd> : Tap to toggle Follow Me / Station Here</li>
+            <li><kbd class="px-1.5 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">Hold E</kbd> : Open Worker's Native 8x4 Container Inventory</li>
+            <li><kbd class="px-1.5 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">Alt + Hold E</kbd> : Open Settlement Hall Inspector on target worker</li>
+            <li><kbd class="px-1.5 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">M</kbd> : Open full World Map to check Worker pins</li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-semibold text-[var(--foreground)] mb-1">Useful Console Commands (<kbd class="px-1 py-0.5 bg-[var(--background)] border border-[var(--border)] rounded font-mono">F5</kbd>):</div>
+          <ul class="space-y-1 font-mono text-[var(--muted-foreground)]">
+            <li><span class="text-emerald-400">workers_test_hunter</span> <span class="text-[var(--muted-foreground)]">- 1-click hunt wild Boar & collect meat</span></li>
+            <li><span class="text-emerald-400">workers_test_forage</span> <span class="text-[var(--muted-foreground)]">- 1-click forager (berries, shrooms & honey)</span></li>
+            <li><span class="text-emerald-400">workers_test_farmer</span> <span class="text-[var(--muted-foreground)]">- 1-click farmer (harvest mature crops)</span></li>
+            <li><span class="text-emerald-400">workers_test_cook</span> <span class="text-[var(--muted-foreground)]">- 1-click cook (grill meat without burning)</span></li>
+            <li><span class="text-emerald-400">workers_test_lowhp</span> <span class="text-[var(--muted-foreground)]">- 1-click test emergency low-HP retreat</span></li>
+            <li><span class="text-emerald-400">workers_test_hauler</span> <span class="text-[var(--muted-foreground)]">- 1-click hauler sandbox (chest + drops)</span></li>
+            <li><span class="text-emerald-400">workers_test_guard</span> <span class="text-[var(--muted-foreground)]">- 1-click guard combat test</span></li>
+            <li><span class="text-emerald-400">workers_verify_status</span> <span class="text-[var(--muted-foreground)]">- Print checklist progress in F5</span></li>
+          </ul>
+        </div>
+      </div>
+    </details>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <!-- Category Tabs -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="filterTabs">
+        <button onclick="setFilter('all')" data-filter="all" class="filter-tab active px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm">
+          All (117)
+        </button>
+                <button onclick="setFilter('expedition')" data-filter="expedition" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          🗺️ Expeditions & Relics (5)
+        </button>
+        <button onclick="setFilter('acquire')" data-filter="acquire" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          🩸 NPC Acquisitions (12)
+        </button>
+        <button onclick="setFilter('actskill')" data-filter="actskill" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          📊 Skills 0-100 (9)
+        </button>
+        <button onclick="setFilter('skilltree')" data-filter="skilltree" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          🌳 Heritage Trees (12)
+        </button>
+        <button onclick="setFilter('charmenu')" data-filter="charmenu" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          📜 Character Menu & Pride (6)
+        </button>
+<button onclick="setFilter('interaction')" data-filter="interaction" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          In-World & Social (12)
+        </button>
+        <button onclick="setFilter('gui')" data-filter="gui" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          F8 UI & Presets (4)
+        </button>
+        <button onclick="setFilter('map')" data-filter="map" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Map Pins (4)
+        </button>
+        <button onclick="setFilter('defense')" data-filter="defense" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Combat & Guard (8)
+        </button>
+        <button onclick="setFilter('gathering')" data-filter="gathering" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Forestry & Mining (13)
+        </button>
+        <button onclick="setFilter('farming')" data-filter="farming" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Farming & Cooking (11)
+        </button>
+        <button onclick="setFilter('logistics')" data-filter="logistics" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Logistics & Smelting (11)
+        </button>
+        <button onclick="setFilter('proving')" data-filter="proving" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          Proving Grounds (10)
+        </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="relative min-w-[200px]">
+        <input type="text" id="searchInput" oninput="renderTestCards()" placeholder="Search test cases or IDs..." class="w-full text-xs px-3 py-2 pl-8 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] placeholder-[var(--placeholder)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]">
+        <span class="absolute left-2.5 top-2.5 text-xs text-[var(--muted-foreground)]">🔍</span>
+      </div>
+    </div>
+
+    <!-- Test Cards Container -->
+    <div id="testCardsContainer" class="space-y-3.5">
+      <!-- Rendered via JavaScript -->
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium shadow-2xl border border-slate-700 flex items-center gap-2">
+      <span id="toastIcon">✅</span>
+      <span id="toastMsg">Report copied to clipboard!</span>
+    </div>
+
+  </div>
+
+  <!-- Optional initial local telemetry script if present in same folder -->
+  <script src="verification_telemetry.js" onerror=""></script>
+
+  <script>
+    // Theme Management
+    let currentTheme = localStorage.getItem("ValheimWorkers_Theme") || "dark";
+
+    function updateThemeUI() {
+      const darkBtn = document.getElementById("themeDarkBtn");
+      const lightBtn = document.getElementById("themeLightBtn");
+      const autoBtn = document.getElementById("themeAutoBtn");
+
+      const activeClass = "bg-[var(--card)] text-[var(--foreground)] shadow-sm border border-[var(--border)] font-bold";
+      const inactiveClass = "text-[var(--muted-foreground)] hover:text-[var(--foreground)]";
+
+      [darkBtn, lightBtn, autoBtn].forEach(btn => {
+        btn.className = `px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${inactiveClass}`;
+      });
+
+      if (currentTheme === "dark") {
+        darkBtn.className = `px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition ${activeClass}`;
+      } else if (currentTheme === "light") {
+        lightBtn.className = `px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition ${activeClass}`;
+      } else {
+        autoBtn.className = `px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition ${activeClass}`;
+      }
+    }
+
+    function setTheme(mode) {
+      currentTheme = mode;
+      localStorage.setItem("ValheimWorkers_Theme", mode);
+
+      if (mode === "dark") {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      } else if (mode === "light") {
+        document.documentElement.classList.add("light");
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.remove("light");
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.add("light");
+        }
+      }
+      updateThemeUI();
+      renderTestCards();
+    }
+
+    // Test database definitions
+const testCases = [
+      {
+        id: "interaction_follow_toggle",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🤝 F33] Follow Me [E] & Inventory [Hold E] Toggle",
+        precondition: "Have an active worker stationed at camp or guard post.",
+        steps: "Approach worker. Tap [E] once to order Follow. Walk 15m away, tap [E] again to Station. Finally, press and hold [E] for 0.5s.",
+        expected: "Tapping [E] commands worker to Follow you (hover prompt updates to 'Station Here'). Tapping [E] again anchors them at their new post. Holding [Hold E] opens their native 8x4 inventory grid without accidentally toggling follow.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "interaction_equip_persistence",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🛡️ F21] Equipment & Armor Retention (Axe & Rag Tunic)",
+        precondition: "Worker has Club in slot 0.",
+        steps: "Hold [E] to open worker inventory. Give Bronze Axe and Rag Tunic. Close inventory. Watch worker equip them and attack/move.",
+        expected: "Rag Tunic automatically equips into chest slot and remains visible. Worker equips Bronze Axe (preferring it over Club). Visual weapon model never vanishes or turns into unarmed fists during swings.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "interaction_loadout_retention",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[⚔️ F17] Guard Loadout & Armor Spawn Persistence",
+        precondition: "Open F8 -> Tab 0 (Hire Worker) -> Select Guard role, Sword, Bronze Buckler, and Leather/Bronze Armor.",
+        steps: "Click 'Hire & Spawn NEW Worker'. Inspect the newly spawned Guard in world and hold [E] to check inventory.",
+        expected: "Worker spawns wearing full helmet, chest, legs armor, holding sword in main hand and shield in off hand. Equipment and armor never get wiped on first inventory event or weapon equip.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "mechanic_auto_unstuck",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🦿 F08] Automated Unstuck & Geometry Clearance",
+        precondition: "Worker is moving toward a post, chest, or target.",
+        steps: "Trap or observe worker wedged between two rocks, steep incline, or building prop while navigating.",
+        expected: "Worker detects zero movement progress (>1.8s), performs autonomous unstuck jump/impulse, attempts lateral deflection, and pops free to open ground without player intervention.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "mechanic_food_healing",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🍖 F16] Food Consumption & Health Recovery",
+        precondition: "Worker has taken damage (HP < MaxHP).",
+        steps: "Hold [E] to give worker food (Raspberries, Cooked Meat, Honey, Mushroom) or ensure food is in camp chest. Observe worker.",
+        expected: "Worker detects low health, consumes food from carried inventory (up to 3 distinct food buffs), gains sustained HP regeneration over time, and emits eating sound effect.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "locomotion_slope_direct_drive",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[⛰️ F10] Contour Following & Direct-Drive Locomotion",
+        precondition: "Camp located on mountain slopes, steep hills, or uneven terrain.",
+        steps: "Order a worker to move across steep slopes (30-45 degrees) between workstations and chests.",
+        expected: "Worker employs direct-drive contour projection with ground-conforming step-hops, smoothly traversing steep inclines without sliding backward or tumbling downhill.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "economy_survival_hire_cost",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[💰 F33] Survival Mode Recruitment Cost Enforcement",
+        precondition: "Survival mode active without devcommands/godmode.",
+        steps: "Configure a Viking worker in F8 Tab 1 with less than 50 Coins in your inventory, then with 50+ Coins, and click 'Hire & Spawn Worker'.",
+        expected: "Hiring is prevented with a warning message when coins are insufficient. When player has 50+ Coins, exactly 50 Coins are deducted from the player's inventory upon spawn.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "death_drop_inventory",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[💀 F33] Dropped Gear & Carried Inventory on Defeat",
+        precondition: "Active worker with weapons, armor, and carried items in inventory.",
+        steps: "Dismiss the worker via F8 or console, or allow worker to be defeated by monsters.",
+        expected: "Worker drops all equipped armor, weapons, tools, and carried inventory items onto the ground as separate loot drops before being destroyed. Nothing is permanently lost.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "duplication_anti_cheat",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🔒 F33] Real Item Transfers & Anti-Duplication Protection",
+        precondition: "Player has weapons, armor, or tools in inventory.",
+        steps: "Give weapons or armor to a worker via native inventory transfer or F8 gear assignment.",
+        expected: "Items are transferred from player bags to worker inventory (deducted from player). Worker never conjures items or free arrows from empty slots.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "social_ship_boarding",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[⛵ F34] Follower Longship & Karve Boarding",
+        precondition: "Player has a follower worker and boards a boat (Karve or Longship).",
+        steps: "Board ship and steer offshore or sit at the rudder while worker is on Follow mode.",
+        expected: "Worker follows player onto the ship deck, anchors securely to the ship frame, and rides along safely without falling overboard or jittering off into deep ocean.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "social_night_torch",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🔦 F35] Night & Dark-Biome Torch Bearing",
+        precondition: "Worker has a Torch in inventory or camp supply chest.",
+        steps: "Wait until nightfall (or travel through dark caves/Black Forest) while worker is following or patrolling.",
+        expected: "Worker automatically equips and lights Torch in the main hand during nighttime to illuminate surroundings, seamlessly holstering it when hostile threats emerge.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "social_tavern_rest",
+        category: "interaction",
+        categoryTitle: "In-World Orders & Social",
+        title: "[🍺 F36] Campfire, Chair & Tavern Bed Leisure Resting",
+        precondition: "Camp with hearth/campfire, chairs, benches, or unassigned beds within 12m of worker's home post.",
+        steps: "Observe an idle worker after daily duties are completed.",
+        expected: "Worker paths toward the campfire or tavern furniture, sits on an empty chair or rests near the hearth, recovering comfort and displaying idle social animations.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gui_resize_br",
+        category: "gui",
+        categoryTitle: "F8 GUI Controls & Presets",
+        title: "[🖥️ F08] GUI Bottom-Right Handle Resize (Diagonal)",
+        precondition: "Press F8 to open NPC Control Panel.",
+        steps: "Hover over bottom-right resize grip (⇲). Click and drag outward diagonally to expand window.",
+        expected: "Window resizes fluidly between min (700x500) and max bounds (1920x1200). Content scales proportionally and persists position across sessions.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gui_resize_bl",
+        category: "gui",
+        categoryTitle: "F8 GUI Controls & Presets",
+        title: "[🖥️ F08] GUI Bottom-Left Handle Resize (Horizontal/Vertical)",
+        precondition: "Press F8 to open NPC Control Panel.",
+        steps: "Hover over bottom-left resize grip (⇱). Click and drag inward or downward to resize.",
+        expected: "Window width adjusts anchored to right edge; height extends downward cleanly without coordinate jumps or layout wrapping.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gui_presets",
+        category: "gui",
+        categoryTitle: "F8 GUI Controls & Presets",
+        title: "[🖥️ F08] GUI Window Resolution Presets (1080p, 1440p, 4K)",
+        precondition: "Press F8 to open NPC Control Panel.",
+        steps: "Click preset buttons: Compact (780x560), Default (940x680), and Large (1160x820) in the header bar.",
+        expected: "Window snaps instantly to exact preset dimensions. Dynamic text scaling updates smoothly to guarantee readability at all resolutions.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_duty_radius",
+        category: "gui",
+        categoryTitle: "F8 GUI Controls & Presets",
+        title: "[📐 F31] Duty Radius Slider & Spherical Clamp Bounds",
+        precondition: "Select worker in F8 -> Tab 1 (Workers Roster).",
+        steps: "Adjust Duty Radius slider from 15m to 45m and observe in-game worker harvest/gather range.",
+        expected: "Worker AI respects updated radius immediately. Targets beyond the new radius boundary are ignored; targets within boundary are prioritized.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "map_minimap_pin",
+        category: "map",
+        categoryTitle: "Map Pins & Navigation",
+        title: "[🗺️ F33] Dynamic MiniMap Compass Pin & Role Badging",
+        precondition: "Spawn or assign a worker to any role.",
+        steps: "Look at top-right MiniMap while moving around camp.",
+        expected: "MiniMap shows live pin tracking the worker's real-time position with role-specific label (e.g. '[Lumberjack] Astrid'). Pin moves smoothly as worker moves.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "map_world_map_pin",
+        category: "map",
+        categoryTitle: "Map Pins & Navigation",
+        title: "[🗺️ F33] Full World Map (M) Worker Tracking Pin",
+        precondition: "One or more active workers stationed in the world.",
+        steps: "Press [M] to open full World Map.",
+        expected: "World Map displays all active worker pins with correct coordinates, distinct worker names, and designated duty stations.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "map_locate_button",
+        category: "map",
+        categoryTitle: "Map Pins & Navigation",
+        title: "[🎯 F33] Roster Quick-Locate & Camera Focus Button",
+        precondition: "Open F8 -> Tab 1 (Workers Roster) with stationed workers.",
+        steps: "Click 'Locate on Map' button next to any worker entry in the roster list.",
+        expected: "World Map opens centered directly on the selected worker's coordinates with ping animation.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "map_pin_dismiss_cleanup",
+        category: "map",
+        categoryTitle: "Map Pins & Navigation",
+        title: "[🧹 F33] Map Pin Auto-Cleanup on Worker Dismissal",
+        precondition: "Active worker with tracking pin visible on Minimap and World Map.",
+        steps: "Dismiss worker via F8 Roster 'Dismiss' button or run console command 'workers_clear'.",
+        expected: "Worker is removed from the world, and their corresponding Minimap and World Map pins are instantly removed without orphan icons.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "defense_manageable_fight",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🛡️ F17] Guard Defense: Manageable Enemy Interception",
+        precondition: "Station a worker with weapon/shield near camp perimeter.",
+        steps: "Spawn a low/moderate threat hostile (e.g. Greydwarf, Boar) within worker's duty radius.",
+        expected: "Worker draws weapon and shield, intercepts enemy aggressively, uses blocking timing, and resumes work once foe is defeated.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "defense_tactical_retreat",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🏃 F17] Guard Defense: Overwhelming Threat Tactical Disengage",
+        precondition: "Civilian worker (Gatherer/Farmer/Cook) stationed at camp.",
+        steps: "Lure a Troll, Abomination, or high-star monster into proximity (or run 'workers_test_troll').",
+        expected: "Civilian detects overpowering threat score, shouts tactical retreat warning, holsters gathering tool, and sprints toward safe home post.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "defense_low_hp_retreat",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🩹 F17] Guard Defense: Critical Low HP (<25%) Camp Sprint",
+        precondition: "Guard worker engaged in combat takes heavy damage dropping below 25% max HP.",
+        steps: "Observe guard behavior when reduced to critical health.",
+        expected: "Guard disengages from melee combat, executes backward dodge roll, calls for backup, and retreats toward camp heart to heal.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "defense_orient_main_base",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🏕️ F17] Emergency Camp Beacon Orientation & Rallying",
+        precondition: "Worker is far out on gathering run during monster raid.",
+        steps: "Trigger raid event or threat while worker is 30m+ from base.",
+        expected: "Worker references primary camp anchor / bed position and navigates directly back along cleared terrain rather than wandering into wilderness.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "hunter_tamed_protection",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🐗 F15] Tamed Animal Protection & Livestock Preservation",
+        precondition: "Tamed Boar, Wolf, or Lox near the worker's work post.",
+        steps: "Order a Hunter to gather RawMeat or Meat resources in an area with tamed creatures.",
+        expected: "Hunter AI checks 'IsTamed()' and exclusively targets wild animals, completely ignoring player-tamed livestock and companions.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "guard_hunter_archery",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[🏹 F18] Hunter-Grade Ballistic Archery & Gravity Drop",
+        precondition: "Guard equipped with Bow and Arrows stationed on watchtower or perimeter.",
+        steps: "Spawn enemy at 15m–35m distance.",
+        expected: "Guard draws bow, applies ballistic gravity compensation based on arrow velocity, and looses accurate ranged shots until target closes within melee range.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "guard_tactical_cqc_swap",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[⚔️ F19] Tactical CQC Weapon Swap (<9.5m Shield & Blade)",
+        precondition: "Guard armed with bow, sword, and shield.",
+        steps: "Allow approaching hostile to close within 9.5 meters.",
+        expected: "Guard immediately stows bow, draws melee weapon and shield, raises guard block, and executes close-quarters melee strikes.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "guard_patrol_warhorn",
+        category: "defense",
+        categoryTitle: "Combat & Guard Defense",
+        title: "[📯 F22] Raid War Horn Alert & High-Threat Settlement Call",
+        precondition: "Guard patrolling camp boundary.",
+        steps: "Spawn high-threat hostile or raid group (Threat Score >= 150).",
+        expected: "Guard sounds War Horn alert with chat shout 'RAID ALERT! Hostile at perimeter!', alerting all nearby workers to enter defensive stance.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_known_filtering",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🔍 F01] Player Knowledge Recipe & Resource Filtering",
+        precondition: "New world or unexplored biomes (e.g. Iron/Silver not yet smelted by player).",
+        steps: "Assign Gatherer in Black Forest or Meadows. Check resource options in F8 Tab 2.",
+        expected: "Unrevealed ores, herbs, and materials remain locked. Workers only harvest resources the player has physically encountered and unlocked.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_missing_tool_prompt",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[⚠️ F01] Missing Tool Warning & HUD Notification",
+        precondition: "Worker has no Axe in inventory.",
+        steps: "Assign Lumberjack role or order worker to chop sturdy Oak/Birch tree.",
+        expected: "Worker detects missing requisite tool tier, emits warning toast/log, and falls back to gathering loose branches on the ground.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_fallback_stone",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🪨 F01] Toolless Rock & Flint Ground Foraging Fallback",
+        precondition: "Worker assigned to collect Stone but has no Pickaxe.",
+        steps: "Place loose stone/flint pickups on ground within radius.",
+        expected: "Worker collects loose ground stones and flint by hand, depositing them into chests without requiring pickaxe swings.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_fallback_wood",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🪵 F01] Toolless Branch Gathering & Bush Bashing Fallback",
+        precondition: "Worker assigned to gather Wood but carries no Axe.",
+        steps: "Ensure small bushes, branches, and saplings are present in duty radius.",
+        expected: "Worker picks up fallen wood branches and bashes small bushes with unarmed strikes to harvest essential firewood.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_food_forage",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🍓 F01] Wild Berry, Mushroom & Foraging Collection",
+        precondition: "Raspberry bushes, blueberries, or red mushrooms in duty radius.",
+        steps: "Assign Gatherer with food foraging enabled.",
+        expected: "Worker approaches berry bushes and mushrooms, picks food items without destroying berry bushes, and returns produce to camp.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gather_beehive_honey",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🍯 F01] Beehive Honey Harvesting without Hive Damage",
+        precondition: "Beehive producing honey near camp.",
+        steps: "Observe Gatherer when beehive contains honey (honey > 0).",
+        expected: "Worker interacts safely with beehive, extracts honey without attacking or taking bee sting damage, and deposits honey in pantry chest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "hunting_game_harvest",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🎯 F01] Wild Game Tracking & Meat Harvesting",
+        precondition: "Hunter assigned with bow/spear near wild Deer or Boar.",
+        steps: "Observe Hunter tracking wild game within duty radius.",
+        expected: "Hunter sneaks toward game, looses ranged projectile, tracks fleeing animal, delivers lethal shot, and collects raw meat and hides.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "lumberjack_stump_priority",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🪵 F02] Stump-First Eradication & Felled Log Priority",
+        precondition: "Area with stumps, felled logs, and standing trees.",
+        steps: "Assign Lumberjack to clear woodland area.",
+        expected: "Lumberjack prioritizes destroying unsightly stumps and sectioning downed logs before chopping new standing trees, keeping the forest clean.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "lumberjack_reforestation",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🌲 F03] Systematic Perimeter Tree Seed Reforestation",
+        precondition: "Lumberjack inventory or camp chests contain Beech, Birch, or Pine seeds.",
+        steps: "Observe Lumberjack after chopping down timber.",
+        expected: "Lumberjack carries tree seeds to outer camp perimeter (3.5m spacing) and plants saplings to ensure sustainable timber replenishment.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "miner_even_field",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[⛏️ F06] Quarry Flattening & Hoe Ground Leveling",
+        precondition: "Uneven cratered quarry terrain with Hoe in worker inventory.",
+        steps: "Observe Miner working in deep quarry excavation.",
+        expected: "Miner equips Hoe and levels jagged terrain craters, preventing hazardous pitfalls and keeping quarry floors smooth.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "miner_vein_exposure",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[⛏️ F07] Vein Edge Trenching & Seam Exposure",
+        precondition: "Buried Copper or Silver vein partially covered by dirt.",
+        steps: "Assign Miner with Pickaxe to large ore deposit.",
+        expected: "Miner excavates perimeter dirt overburden around the deposit, exposing the full subterranean vein structure before cracking core ore.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "gatherer_sap_collector",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🧪 F09] Yggdrasil Mistlands Sap Collector Tapping",
+        precondition: "Sap Collector attached to giant Yggdrasil root in Mistlands camp.",
+        steps: "Observe Gatherer when Sap Collector fills with refined sap.",
+        expected: "Worker approaches collector, extracts raw sap, and deposits it into secure magical storage containers.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "worker_workbench_repair",
+        category: "gathering",
+        categoryTitle: "Forestry & Mining Mechanics",
+        title: "[🔨 F20] Autonomous Workbench Tool Maintenance & Repair",
+        precondition: "Workbench in camp and worker tools with degraded durability.",
+        steps: "Allow worker tools (Axe, Pickaxe, Cultivator) to degrade through labor.",
+        expected: "Worker pauses field tasks, walks to nearest covered Workbench, repairs all worn equipment to 100% durability, and returns to work.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farming_crop_harvest",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🌾 F11] Mature Crop Harvesting (Carrots, Turnips, Onions)",
+        precondition: "Garden plot with ripe, fully grown crops.",
+        steps: "Assign Farmer to garden area.",
+        expected: "Farmer harvests only mature crops, ignoring unripe saplings, and gathers seeds and produce into inventory.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farmer_cultivated_ground",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🌱 F11] Cultivated Soil Detection & Strict Spacing Check",
+        precondition: "Garden plot with cultivated ground and surrounding uncultivated dirt.",
+        steps: "Assign Farmer order with seeds in inventory.",
+        expected: "Farmer verifies 'Heightmap.IsCultivated' and confirms 0.4m radius clearance before planting saplings. Never plants on uncultivated soil and never calls instant Grow().",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farming_crop_replant",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🌾 F11] Direct-Seed Garden Replanting Cycle",
+        precondition: "Farmer harvests mature crops and carries harvested seeds.",
+        steps: "Observe Farmer immediately after harvesting crop row.",
+        expected: "Farmer equips Cultivator, plants matching seed type in freshly vacated cultivated spot with 0.4m spacing, ensuring uninterrupted crop cycles.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farmer_auto_cultivate_patch",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🚜 F13] Cultivator Soil Preparation & Patch Expansion",
+        precondition: "Raw grassy or dirt soil inside agricultural duty zone with Cultivator in inventory.",
+        steps: "Observe Farmer when existing cultivated soil is fully planted.",
+        expected: "Farmer strikes raw soil with Cultivator to cultivate a new garden patch before planting additional crop seeds.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farmer_proactive_planting",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🌱 F12] Proactive Seed Planting from Settlement Stock",
+        precondition: "Camp chests contain excess Carrot, Turnip, Onion, or Barley seeds.",
+        steps: "Ensure cultivated ground has empty space.",
+        expected: "Farmer proactively retrieves seeds from camp storage chests, paths to available garden plots, and plants them without player prompting.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farming_feed_tamed",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🥕 F15] Tamed Livestock Auto-Feeding & Pen Maintenance",
+        precondition: "Hungry tamed Boars or Lox in breeding pen with appropriate fodder in camp chests.",
+        steps: "Observe Farmer when tamed animals emit hungry heartless status.",
+        expected: "Farmer fetches root vegetables or berries and tosses feed near hungry livestock to maintain animal health and reproduction.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "cooking_station_grill",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🍖 F23] Spit Cooking Station Raw Meat Grilling",
+        precondition: "Lit cooking spit / cooking station with raw meat in cook inventory or nearby chest.",
+        steps: "Assign Cook Olav near kitchen hearth.",
+        expected: "Cook mounts raw meat onto empty spit slots, monitors cooking timers, and removes sizzling cooked meat onto kitchen counter.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "cooking_prevent_burn",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[⏱️ F23] Timing-Based Burn Prevention (Zero Charcoal)",
+        precondition: "Meat cooking on spit reaches cooked state.",
+        steps: "Observe Cook during meat cooking cycle.",
+        expected: "Cook promptly removes meat within 2 seconds of cooking completion, completely preventing overcooking into coal/charcoal.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "cooking_cauldron_stew",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🍲 F24] Cauldron Recipe Brewing (Hearty Soups & Stews)",
+        precondition: "Hearth with hung Iron Cauldron and stew ingredients in pantry chest.",
+        steps: "Assign Cook to kitchen with Deer Stew, Queens Jam, or Minced Meat Sauce recipes unlocked.",
+        expected: "Cook combines cauldron ingredients, brews high-tier soups and stews, and prepares nutritional rations for settlement workers.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "cooking_fermenter_tap",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🍺 F25] Fermenter Finished Mead Tapping & Cask Emptying",
+        precondition: "Fermenter containing fermented mead reaches 'Ready' state.",
+        steps: "Observe Cook when Fermenter brewing finishes.",
+        expected: "Cook approaches Fermenter, taps aged mead base into potion flasks (Healing/Stamina/Frost Resist), and stores potions in apothecary chest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "cooking_pantry_deposit",
+        category: "farming",
+        categoryTitle: "Farming & Cooking Life",
+        title: "[🍱 F26] Prepared Food Sorting into Kitchen Pantry Chests",
+        precondition: "Cook finishes cooking batches of food.",
+        steps: "Observe Cook carrying cooked meals.",
+        expected: "Cook delivers cooked food stacks into kitchen pantry chests or food-designated storage containers, avoiding raw supply crates.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "tender_smelter_add_ore",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🏭 F28] Smelter & Charcoal Kiln AddOre RPC Processing",
+        precondition: "Camp with Charcoal Kiln, Smelter, wood, and ore chests.",
+        steps: "Assign Base Tender order to fuel smelters and kilns.",
+        expected: "Base Tender dispatches 'AddOre' RPC with proper prefab string and bool arguments. Never confuses Windmills or Spinning Wheels with Charcoal Kilns.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_protected_gear",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🛡️ F21] Protected Equipment Retention During Drop-Off",
+        precondition: "Worker carrying tools, weapons, armor, rations, and harvested logs/ores.",
+        steps: "Observe worker depositing resources into camp chests.",
+        expected: "Worker deposits harvested timber/ore stacks while strictly retaining equipped armor, axes, bows, arrows, and personal food rations in inventory.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_smart_sorting",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[📦 F31] Smart Storage Sorting into Matching Item Stacks",
+        precondition: "Camp has separate chests containing Wood, Stone, and Ore.",
+        steps: "Hauler or gatherer arrives with mixed inventory to deposit.",
+        expected: "Worker scans chests and deposits each item into existing matching stacks first (Wood with Wood, Copper with Copper) before consuming empty slots.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_overflow_piles",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[📦 F05] Physical Overflow Resource Piles (Wood/Stone)",
+        precondition: "All camp chests are completely full of Wood or Stone.",
+        steps: "Worker finishes gathering with full chests in vicinity.",
+        expected: "Worker constructs authentic physical Wood Piles or Stone Piles on open ground near camp, storing surplus without halting labor.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "farming_chest_deposit",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🧺 F14] Farmer Produce Drop-Off into Dedicated Chests",
+        precondition: "Farmer finishes sweeping harvested crops.",
+        steps: "Observe Farmer depositing harvested produce.",
+        expected: "Farmer delivers harvested crops into food storage containers, ensuring farm produce is organized and accessible.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "processing_kiln_smelter",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🏭 F28] Continuous Smelting Fuel & Ore Batch Management",
+        precondition: "Smelter and Kiln requiring fuel/wood with raw materials in chests.",
+        steps: "Assign Base Tender to smelting zone.",
+        expected: "Base Tender loads wood into Kilns for coal, feeds coal and raw ores into Smelter, keeping ingots flowing continuously.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "tender_windmill_spinning",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[💨 F29] Windmill Barley Milling & Spinning Wheel Loading",
+        precondition: "Windmill and Spinning Wheel in camp with Barley / Flax in chests.",
+        steps: "Assign Base Tender in Plains camp.",
+        expected: "Base Tender loads Barley into Windmill hopper and Flax onto Spinning Wheels to produce Barley Flour and Linen Thread.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "tender_refuel_fires",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🔥 F27] Campfire, Hearth & Sconce Auto-Refueling",
+        precondition: "Campfires, hearths, brazier, or standing wood/iron torches low on fuel.",
+        steps: "Observe Base Tender with Wood / Resin in supply chests.",
+        expected: "Base Tender tours the settlement, adding Wood to campfires and Resin to torches, keeping lights and warm buffs active.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "base_repair_structures",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🔨 F30] Base Repair & Structure Reinforcement (<100% HP)",
+        precondition: "Damaged palisades, doors, or roofing (<100% HP) with Hammer in Base Tender inventory.",
+        steps: "Observe Base Tender patrolling base perimeter.",
+        expected: "Base Tender equips Hammer, approaches damaged building pieces, and repairs them to full health with authentic hammer swing animation.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_sign_routing",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🏷️ F31] Sign-Marked Container Item Label Routing",
+        precondition: "Chests with attached Signs labeled 'Wood', 'Ore', 'Food', 'Arrows'.",
+        steps: "Worker deposits harvested materials at camp.",
+        expected: "Worker reads sign text and prioritizes chests whose sign labels match item names/categories before unlabelled chests.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "logistics_cart_loading",
+        category: "logistics",
+        categoryTitle: "Logistics & Smelting Operations",
+        title: "[🛒 F32] Mobile Cart Container Loading & Offloading",
+        precondition: "Mobile Cart parked near workstation or resource node.",
+        steps: "Worker finishes gathering with cart container in proximity.",
+        expected: "Worker deposits heavy lumber and ore directly into the mobile cart container for bulk overland hauling.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_lumberjack",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Lumberjack Proving Grounds (Logging & Clearing)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_lumberjack'.",
+        steps: "Click 'Lumberjack Scenario' button.",
+        expected: "Spawns mature trees, stumps, fallen logs, supply chest, and Lumberjack Einar. Einar chops trees, clears stumps, plants saplings, and deposits wood into chest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_mining",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Mining Proving Grounds (Copper Deposit & Ore)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_miner'.",
+        steps: "Click 'Mining Scenario' button.",
+        expected: "Spawns large copper rock, supply chest with bronze pickaxe, and Miner Torstein. Torstein mines deposit, collects copper and stone drops, and levels ground.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_hunting",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Hunting Proving Grounds (Deer & Boar Pursuit)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_hunter'.",
+        steps: "Click 'Hunting Scenario' button in F8 Tab 3.",
+        expected: "Hunter Astrid spawns armed with Finewood Bow and arrows; wild deer spawn at 35m distance. Astrid stalks, fires ballistic arrows, harvests raw meat, and stores in chest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_archery_target",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Archery Range Proving Grounds (Stationary Target)",
+        precondition: "Open F8 -> Proving Grounds tab.",
+        steps: "Click 'Stationary Archery Range' scenario button.",
+        expected: "Spawns archery range target dummy at 25m with equipped archer. Archer draws bow, fires precision target shots, demonstrating ballistic gravity arc.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_farming",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Farming Proving Grounds (Garden Plot & Seeding)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_farm'.",
+        steps: "Click 'Farming & Crop Replant Scenario' button in F8 Tab 3.",
+        expected: "Spawns cultivated plot with ripe carrot crops, supply chest with seeds, and Farmer Freyja. Freyja harvests ripe crops, plants seeds with 0.4m spacing, and deposits harvest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_cooking",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Cooking Proving Grounds (Hearth & Spit Grilling)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_cook'.",
+        steps: "Click 'Cooking Spit Scenario' button in F8 Tab 3.",
+        expected: "Spawns hearth, cooking spit, raw meat chest, and Cook Olav. Olav mounts meat onto spit, removes food before it burns, and organizes pantry.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_foraging",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Foraging Proving Grounds (Berries & Beehive)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_forage'.",
+        steps: "Click 'Foraging & Beehive Scenario' in F8 Tab 3.",
+        expected: "Gatherer Astrid spawns near ripe raspberry bush, mushroom cluster, and beehive. Astrid collects berries and mushrooms, extracts honey from beehive without damage, and stores in pantry chest.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_smelter_kiln",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Smelting Proving Grounds (Smelter & Charcoal Kiln)",
+        precondition: "Open F8 -> Proving Grounds tab.",
+        steps: "Click 'Smelter & Kiln Operations' scenario button.",
+        expected: "Spawns Smelter, Charcoal Kiln, ore chest, wood chest, and Base Tender. Tender loads wood into Kiln, feeds coal and raw ore into Smelter via AddOre RPC.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_troll_threat",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Troll Threat Proving Grounds (Emergency Retreat)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_troll'.",
+        steps: "Click 'Troll Threat Scenario' button.",
+        expected: "Worker Einar spawns near work post; high-threat hostile appears at 20m. Einar detects extreme threat score (>100), emits warning shout, and tactically retreats to camp.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "proving_low_hp_scenario",
+        category: "proving",
+        categoryTitle: "Proving Grounds 1-Click Scenarios",
+        title: "[🧪 Scenario] Critical HP Proving Grounds (Camp Sprint)",
+        precondition: "Open F8 -> Proving Grounds tab or run 'workers_test_lowhp'.",
+        steps: "Click 'Low HP Scenario' button.",
+        expected: "Guard Torstein spawns with 12/100 HP facing a hostile. Guard disengages from combat, sprints to safe camp boundary, and begins eating to regenerate.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      }
+,
+      // ==========================================
+      // MODULE 9: MAP EXPEDITIONS & WAYFINDER SIGN STONES
+      // ==========================================
+      {
+        id: "expedition_signstone_spawn",
+        category: "expedition",
+        categoryTitle: "Map Expeditions & Wayfinder Sign Stones",
+        title: "[🗺️ EXP-01] Wayfinder Sign Stone Spawning & In-World Navigation",
+        precondition: "Press F8 -> Tab 3 (Proving Grounds) and click any Expedition button (e.g., Barrow of Skarde).",
+        steps: "Verify a Wayfinder Sign Stone appears 3m ahead with compass bearing (e.g. ⬆️ N 40m), distance in meters, and readable sign text. Check that a landmark pin is placed on the World Map (M).",
+        expected: "Sign Stone stands facing player pointing directly toward target site; sign inscription reads target name and distance; Minimap pin matches site coordinates.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "expedition_dagger_discovery",
+        category: "expedition",
+        categoryTitle: "Map Expeditions & Wayfinder Sign Stones",
+        title: "[🗡️ EXP-02] Barrow of Skarde: Uncover Skarde's Sacrificial Dagger",
+        precondition: "Trigger 'Barrow of Skarde' in F8 -> Tab 3. Follow North Sign Stone (40m N).",
+        steps: "Defeat or bypass tomb skeleton guards, locate burial stone circle, and open the tomb chest.",
+        expected: "Tomb chest contains Skarde's Sacrificial Dagger (VW_SacrificialDagger) and 30x BoneFragments. Acquiring dagger triggers telemetry pass.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "expedition_chalice_discovery",
+        category: "expedition",
+        categoryTitle: "Map Expeditions & Wayfinder Sign Stones",
+        title: "[🩸 EXP-03] Crypt of Valka the Red: Uncover the Blood Chalice",
+        precondition: "Trigger 'Crypt of Valka the Red' in F8 -> Tab 3. Follow North-East Sign Stone (45m NE).",
+        steps: "Navigate to the sacrificial altar and sunken ship barrow; open the altar chest.",
+        expected: "Altar chest contains Blood Chalice of Valka (VW_BloodChalice), Sacrificial Dagger, and 40x BoneFragments. Acquiring chalice triggers telemetry pass.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "expedition_human_relics_discovery",
+        category: "expedition",
+        categoryTitle: "Map Expeditions & Wayfinder Sign Stones",
+        title: "[🛡️ EXP-04] Viking Awakening Trail: Draupnir Oil & Gjallarhorn",
+        precondition: "Trigger 'Viking Awakening Trail' in F8 -> Tab 3. Follow East Sign Stone trail (40m E).",
+        steps: "Traverse the 4 staged sites (Campfire -> Homestead -> Standing Stone -> High Mead-Hall) and open Stage 3 & 4 chests.",
+        expected: "Stage 3 chest contains Draupnir Awakening Oil (VW_AwakeningOil); Stage 4 chest contains Gjallarhorn of the Hearth (VW_Gjallarhorn). Acquiring either triggers telemetry pass.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "expedition_dvergr_seal_discovery",
+        category: "expedition",
+        categoryTitle: "Map Expeditions & Wayfinder Sign Stones",
+        title: "[⛏️ EXP-05] Dvergr Guild Trail: Grand Dvergr Guild Seal Recovery",
+        precondition: "Trigger 'Dvergr Guild Trail' in F8 -> Tab 3. Follow South-East Sign Stone trail (45m SE).",
+        steps: "Traverse past Beacon, Fermenter Camp, and Three Fires to the Plundered Troll Cave; defeat Troll and open sunken chest.",
+        expected: "Chest contains Grand Dvergr Guild Seal (VW_DvergrSeal), 99 Coins, and Rubies/Pearls. Acquiring seal triggers telemetry pass.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+
+      // ==========================================
+      // MODULE 10: ALL 10 NPC ACQUISITION PATHS
+      // ==========================================
+      {
+        id: "acquire_skel_dagger_boar",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[💀 ACQ-01] Skeleton Acquisition: Sacrificial Dagger Boar-Over-Bones Kill",
+        precondition: "Equip Sacrificial Dagger (VW_SacrificialDagger). Drop 10+ BoneFragments near a tamed Boar.",
+        steps: "Lure the Boar over the bone pile and strike it with the Sacrificial Dagger.",
+        expected: "Boar is instantly one-shot killed like Butcher's Knife; warm blood spills on bones; 10 bones are consumed; lightning/blood VFX play and a Skeleton Worker rises!",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_skel_chalice_harvest",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🩸 ACQ-02] Skeleton Acquisition: Blood Chalice Slaying Yields (Size Tiers)",
+        precondition: "Carry Blood Chalice in inventory without ground bones nearby.",
+        steps: "Slay wildlife of different sizes: Neck (+3), Boar (+10), Deer (+15), Wolf (+25), Troll (+45), Lox (+75).",
+        expected: "Spilled blood is captured into Blood Chalice; Chalice tooltip updates with current blood charges (0–100+).",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_skel_chalice_selfbleed",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🩸 ACQ-03] Skeleton Acquisition: Viking Self-Sacrifice Palm-Slit Rite",
+        precondition: "Wield Blood Chalice or Sacrificial Dagger with player HP > 35.",
+        steps: "Press Middle-Click (or G key) to initiate the ancient blood-letting rite.",
+        expected: "Player suffers 30 slash damage; +15 Blood charges are funneled into Chalice; message displays palm-slit rite confirmation.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_skel_chalice_pour",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🩸 ACQ-04] Skeleton Acquisition: Pour Blood Chalice onto Ground Bones",
+        precondition: "Blood Chalice with >= 10 Blood. Drop 10+ BoneFragments 2-3m in front of player.",
+        steps: "Wield Chalice and Left-Click targeting the ground bones.",
+        expected: "10 Blood consumed from Chalice; 10 bones consumed; dark blood splash FX animates; a Skeleton Servant rises on demand!",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_human_t1_lost_soul",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🏕️ ACQ-05] Human Tier 1: Lost Soul Campfire Offering",
+        precondition: "Wayside campfire with rags and food offering (or F8 Lineage Lore).",
+        steps: "Complete campfire offering or hire Tier 1 Lost Soul.",
+        expected: "Lost Soul (Lv. 1) is recruited; humble worker grateful for any chore, 0% pride decay on menial labor.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_human_t2_homesteader",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🏡 ACQ-06] Human Tier 2: Ruined Homestead Rescue & Restoration",
+        precondition: "Clear raiders from Ruined Homestead and repair wooden structure with Hammer.",
+        steps: "Restore homestead and recruit Tier 2 Homesteader.",
+        expected: "Tier 2 Homesteader (Lv. 5) unlocked; capable of independent farming, lumberjack and basic cooking.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_human_t3_drengr",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[⚔️ ACQ-07] Human Tier 3: Ancient Standing Stone & Draupnir Oil Anointing",
+        precondition: "Locate Ancient Standing Stone; carry Draupnir Awakening Oil (VW_AwakeningOil) and boss trophy.",
+        steps: "Anoint the standing stone to awaken a slumbering warrior spirit.",
+        expected: "Veteran Drengr (Lv. 10) recruited; Ranger and Shield-Wall skill trees accessible; expects dignified combat/guard duties.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_human_t4_einherjar",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[📯 ACQ-08] Human Tier 4: High Mead-Hall Gjallarhorn Summons",
+        precondition: "Construct High Mead-Hall (Hearth + Comfort >= 10); carry Gjallarhorn of the Hearth (VW_Gjallarhorn).",
+        steps: "Blow the Gjallarhorn inside the Mead-Hall feast chamber.",
+        expected: "Einherjar Champion (Lv. 16+) arrives; gold armor, devastating melee stats; refuses menial tasks without mead/feasts.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_dvergr_t1_drudge",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[⛏️ ACQ-09] Dvergr Tier 1: Broken Survey Beacon Repair",
+        precondition: "Locate Broken Survey Beacon; provide Copper (10) and Bronze (5).",
+        steps: "Repair beacon mechanisms and rescue the stranded Dvergr drudge.",
+        expected: "Stranded Drudge (Lv. 2) joins settlement; sturdy underground digger with base pickaxe proficiency.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_dvergr_t2_prospector",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🍺 ACQ-10] Dvergr Tier 2: Prospector's Brew Camp Commission",
+        precondition: "Offer fermented mead and Bronze ingots at Prospector's Camp.",
+        steps: "Commission Deep-Vein Prospector (Lv. 7).",
+        expected: "Prospector recruited; dvergr_mine skill accessible; detects hidden subterranean mineral veins.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_dvergr_t3_smith",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🔥 ACQ-11] Dvergr Tier 3: Hall of Three Fires Forge Master",
+        precondition: "Construct active Kiln, Smelter, and Forge cluster; pay metal commission.",
+        steps: "Enlist Master Forge-Smith (Lv. 12).",
+        expected: "Forge-Smith recruited; dvergr_smelt and dvergr_anvil skills available; boosts blast furnace smelting speed.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "acquire_dvergr_t4_sentinel",
+        category: "acquire",
+        categoryTitle: "All 10 NPC Acquisition Paths",
+        title: "[🛡️ ACQ-12] Dvergr Tier 4: Plundered Troll Cave & Guild Seal Presentation",
+        precondition: "Clear Plundered Troll Cave, recover Grand Dvergr Guild Seal, and present it with treasure tribute.",
+        steps: "Contract Arcane Ward-Sentinel (Lv. 18).",
+        expected: "Ward-Sentinel recruited; dvergr_ward skill unlocked; wields crossbow/staff and projects protective ward field.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+
+      // ==========================================
+      // MODULE 11: VALHEIM ACTIVITY SKILLS (0-100) & LEVELING
+      // ==========================================
+      {
+        id: "actskill_woodcutting",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🪓 SKL-01] Woodcutting (0–100): Chop Damage & Wood Yield Scaling",
+        precondition: "Assign worker to Lumberjack role or click '+20 All 8 Skills' in Proving Grounds.",
+        steps: "Observe worker felling trees or leveling up Woodcutting skill.",
+        expected: "Skill bar fills in Skills Dialog; each level grants +1.0% chop damage and +0.5% bonus wood drops.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_mining",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[⛏️ SKL-02] Mining (0–100): Pickaxe Power & Ore Extraction",
+        precondition: "Assign worker to Miner role or test against rock boulder.",
+        steps: "Worker strikes rock/ore deposit; inspect Mining skill progression.",
+        expected: "Mining skill increases with strikes; grants +1.0% pickaxe rock damage per level.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_melee",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[⚔️ SKL-03] Melee Combat (0–100): Weapon Damage & Stamina Efficiency",
+        precondition: "Worker engages hostiles with melee weapon (Sword, Axe, Club).",
+        steps: "Worker lands hits in combat; inspect Melee Combat skill in Tab 1.",
+        expected: "Melee Combat XP rises per hit; grants +1.0% physical melee damage per level.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_blocking",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🛡️ SKL-04] Blocking (0–100): Shield Absorption & Parry Window",
+        precondition: "Equip worker with shield and face attacking foes.",
+        steps: "Worker successfully blocks or parries incoming strikes.",
+        expected: "Blocking skill advances; provides +1.0% block armor and +0.5% parry multiplier per level.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_bows",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🏹 SKL-05] Bows & Archery (0–100): Draw Speed & Arrow Precision",
+        precondition: "Equip Hunter/Guard with Bow and Arrows against target dummy or wildlife.",
+        steps: "Worker looses arrows at range; check Bows skill in menu.",
+        expected: "Bows skill levels up; grants +1.0% ranged projectile damage and faster draw time per level.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_farming",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🌾 SKL-06] Farming & Forage (0–100): Harvest Yield & Seed Saver",
+        precondition: "Assign Farmer to plant/harvest crops or Gatherer to pick berries/herbs.",
+        steps: "Worker gathers crops or wild food; inspect Farming skill in Tab 1.",
+        expected: "Farming skill advances per harvest; grants +0.5% bonus double harvest yield per level.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_crafting",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🍳 SKL-07] Cooking & Crafting (0–100): Processing Speed & Charcoal Efficiency",
+        precondition: "Assign Cook to grill/cauldron or Base Tender to smelter/kiln.",
+        steps: "Worker cooks food without burning or loads smelter ore; inspect Crafting skill.",
+        expected: "Cooking & Crafting skill advances; accelerates processing cycle speed (+0.8%/lv).",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_athletics",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[🏃 SKL-08] Athletics & Hauling (0–100): Movement Speed & Carry Capacity",
+        precondition: "Assign Hauler to transport items or have worker run between duty posts.",
+        steps: "Worker hauls item stacks between chests; inspect Athletics skill in Tab 1.",
+        expected: "Athletics skill advances; boosts movement speed (+0.25%/lv) and bonus carry weight (+2 kg/lv).",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "actskill_overall_levelup",
+        category: "actskill",
+        categoryTitle: "Valheim Activity Skills (0-100) & Leveling",
+        title: "[⭐ SKL-09] Overall Character Leveling (Lv. 1–20) & Skill Point (SP) Accrual",
+        precondition: "Raise any Valheim activity skill or click '+5 Levels & SP' in Proving Grounds.",
+        steps: "Observe overall XP bar filling and character level advancing.",
+        expected: "Worker levels up (Lv. 1 -> 20); awards +1 SP per level; floating level-up banner and speech bubble trigger.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+
+      // ==========================================
+      // MODULE 12: HERITAGE SKILL TREES, EVOLUTION & PATRONAGE
+      // ==========================================
+      {
+        id: "skilltree_human_woodsman",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🌲 TREE-01] Human Woodsman & Miner Branch (hum_wood_1..4)",
+        precondition: "Select a Human worker in Character Menu -> Tab 2 (Heritage Tree) with available SP.",
+        steps: "Unlock Sawyer's Rhythm (hum_wood_1), Deep-Vein Delver (hum_wood_2), Clear-Cut (hum_wood_3), or Jotunn-Feller (hum_wood_4).",
+        expected: "SP is deducted; node lights up gold; tree/ore yield bonuses apply in real-time.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_human_hearth",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🍲 TREE-02] Human Hearth & Harvest Branch (hum_hearth_1..4)",
+        precondition: "Select Human worker; unlock Hearth & Harvest branch nodes.",
+        steps: "Unlock Green Thumb (hum_hearth_1), Master Stoke-Hand (hum_hearth_2), Brewer (hum_hearth_3), or Steward of Plenty (hum_hearth_4).",
+        expected: "Node unlocks; grants crop replant conservation, smelter double-bars, or feast buffs.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_human_ranger",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🏹 TREE-03] Human Ranger & Hunter Branch (hum_rang_1..4)",
+        precondition: "Select Human worker (Tier 2+); unlock Ranger branch nodes.",
+        steps: "Unlock Keen Eye (hum_rang_1), Butcher's Precision (hum_rang_2), Beast-Tamer (hum_rang_3), or Skadi's Chosen (hum_rang_4).",
+        expected: "Node unlocks; worker gains stealth hunting range, bonus hides/meat, and crit damage.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_human_shieldwall",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🛡️ TREE-04] Human Shield-Wall Branch (hum_guard_1..4)",
+        precondition: "Select Human worker (Tier 3+); unlock Shield-Wall branch nodes.",
+        steps: "Unlock Timed Parry (hum_guard_1), Vanguard Taunt (hum_guard_2), Huscarl's Conditioning (hum_guard_3), or Einherjar's Wrath (hum_guard_4).",
+        expected: "Node unlocks; worker gains auto-parry, defensive warcries, and heavy armor stamina discounts.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_skel_evolutions",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[💀 TREE-05] Skeleton 4-Stage Morphological Evolution (Forms I–IV)",
+        precondition: "Skeleton worker with accumulated Marrow Blood; open Character Menu Tab 2.",
+        steps: "Evolve: Form 1 (Thrall) -> Form 2 (Sinew-Woven) -> Form 3 (Draugr-Grafted Hulk) -> Form 4 (Crimson Revenant Lord).",
+        expected: "Skeleton transforms visually: model scales up (1.0x -> 1.1x -> 1.35x -> 1.6x), max HP expands (60 -> 140 -> 280 -> 450), bone tint/eyes shift.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_skel_graft_1_2",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🦴 TREE-06] Skeleton Blood-Grafts: Lumber-Claws & Tendon-Pick",
+        precondition: "Skeleton worker with blood; unlock skel_graft_1 (Ossified Lumber-Claws) or skel_graft_2 (Marrow-Pick Tendons).",
+        steps: "Apply sacrificial graft on skeleton in Tab 2.",
+        expected: "Graft attached; skeleton can harvest wood or mine stone without equipping physical tools.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_skel_graft_3_4",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🦴 TREE-07] Skeleton Blood-Grafts: Cargo Rib-Cage & Serrated Femurs",
+        precondition: "Skeleton worker; unlock skel_graft_3 (Hollow-Rib Cargo Cage) or skel_graft_4 (Serrated Femur Blades).",
+        steps: "Apply sacrificial graft in Tab 2.",
+        expected: "Graft attached; inventory expands +6 slots or melee attacks inflict persistent bleed damage on foes.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_skel_graft_5_6",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🦴 TREE-08] Skeleton Blood-Grafts: Surtling Eyes & Marrow-Thirst",
+        precondition: "Skeleton worker; unlock skel_graft_5 (Surtling-Core Sockets) or skel_graft_6 (Vampiric Marrow-Thirst).",
+        steps: "Apply sacrificial graft in Tab 2.",
+        expected: "Graft attached; worker operates blast furnaces safely and doubles combat blood-feeding absorption rate.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_skel_combat_bloodfeed",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🩸 TREE-09] Skeleton Combat Blood-Feeding (Hit & Kill Absorption)",
+        precondition: "Skeleton worker engages living, bleeding foes (Boar, Deer, Greydwarf, Wolf).",
+        steps: "Observe skeleton striking and slaying living enemies.",
+        expected: "Skeleton absorbs +0.5 Marrow Blood and heals 2 HP per melee hit; slays award +2..6 Marrow Blood and trigger '*drinks blood*' speech bubble.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_dvergr_mine_gem",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[💎 TREE-10] Dvergr Luxury Patronage: Seismic Ore-Sense & Lapidary",
+        precondition: "Select Dvergr worker; bestow luxury patronage nodes dvergr_mine or dvergr_gem.",
+        steps: "Spend Coins + Rubies/Amber in Tab 2.",
+        expected: "Patronage certified; unlocks seismic ore detection and bonus gem drops while quarrying.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_dvergr_smelt_anvil",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🔨 TREE-11] Dvergr Luxury Patronage: Eitr Blast Furnace & Runic Anvil",
+        precondition: "Select Dvergr worker; bestow patronage nodes dvergr_smelt or dvergr_anvil.",
+        steps: "Spend Coins + Surtling Cores/Silver in Tab 2.",
+        expected: "Patronage certified; doubles smelter throughput and enables automatic settlement gear repair.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "skilltree_dvergr_brew_ward",
+        category: "skilltree",
+        categoryTitle: "Heritage Skill Trees, Evolution & Patronage",
+        title: "[🛡️ TREE-12] Dvergr Luxury Patronage: Kvasir's Vat & Ward Matrix",
+        precondition: "Select Dvergr worker; bestow patronage nodes dvergr_brew or dvergr_ward.",
+        steps: "Spend Coins + Royal Jelly/Eitr in Tab 2.",
+        expected: "Patronage certified; unlocks fermented mead enhancements and active arcane ward shielding for base defense.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+
+      // ==========================================
+      // MODULE 13: PRIDE MECHANICS & NPC CHARACTER MENU UI
+      // ==========================================
+      {
+        id: "charmenu_pride_decay",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[😤 MENU-01] Elite Pride/Dignity Decay on Menial Tasks",
+        precondition: "Assign elite worker (Tier 3 Drengr or Tier 4 Einherjar) to menial Hauler or weeding task (or click 'Trigger Pride Crisis' in Proving Grounds).",
+        steps: "Observe Pride bar in Character Menu over 1-2 minutes.",
+        expected: "Pride decays; below 20% worker slows down and complains ('Odin did not bring me here to pick berries...'); below 10% worker refuses work.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "charmenu_pride_appease",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[🍖 MENU-02] Pride Appeasement: Food/Mead & Dvergr Luxury Gifts",
+        precondition: "Unhappy or grumbling worker with depleted Pride meter.",
+        steps: "Transfer high-tier food/mead to Human, or Coins/Gems to Dvergr (or click 'Appease Pride' in Proving Grounds).",
+        expected: "Pride is restored to 100%; worker rejoices ('A hearty offering! My pride is restored!'); Dvergr gains 'Wealthy & Smug' immunity.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "charmenu_side_drawer",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[📦 MENU-03] In-World Container Side-Drawer & Quick-Action Icons",
+        precondition: "Approach any worker in the world and hold [E] to open their container inventory.",
+        steps: "Verify the compact Character Side-Drawer renders beside InventoryGui with Name, Level/XP, Pride, Top 3 Skills, and 3 Action Icons (⚔️, 🌳, 📜).",
+        expected: "Side-drawer renders seamlessly without overlapping Valheim inventory; clicking action icons opens corresponding Character Menu tab.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "charmenu_tab1_paperdoll",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[🪖 MENU-04] Full Character Menu: Tab 0 Paperdoll Loadout & Combat Stats",
+        precondition: "Open Character Menu via 📜 icon in side-drawer or Alt + Hold [E].",
+        steps: "Inspect Tab 0 (Character & Stats).",
+        expected: "Renders equipped paperdoll slots (Helmet, Chest, Legs, Weapon, Shield, Bow, Ammo, Cape), Active Food buffs, Vitality/Armor stats, and Role selector.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "charmenu_tab2_skills_dialog",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[📊 MENU-05] Full Character Menu: Tab 1 Valheim SkillsDialog View (0–100)",
+        precondition: "Click Tab 1 (⚔️ Skills 0–100) in Character Menu.",
+        steps: "Inspect all 8 Valheim Activity Skills.",
+        expected: "Displays all 8 skills (Woodcutting, Mining, Melee, Blocking, Bows, Farming, Crafting, Athletics) with cyan progression bars, Lv. X/100, and concrete bonuses.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      },
+      {
+        id: "charmenu_tab3_skill_tree",
+        category: "charmenu",
+        categoryTitle: "Pride Mechanics & NPC Character Menu UI",
+        title: "[🌳 MENU-06] Full Character Menu: Tab 2 Heritage Skill Tree Node Graph",
+        precondition: "Click Tab 2 (🌳 Heritage Tree) in Character Menu.",
+        steps: "Inspect tree graph: 4 Human branches, Skeleton 4-Stage Evolution Spine & Grafts, or Dvergr Patronage Ledger.",
+        expected: "Visual node graph displays locked/available/unlocked states; clicking node reveals Skill Inspector with costs, prerequisites, and unlock button.",
+        status: "untested",
+        manualOverride: false,
+        notes: "",
+        consoleVerified: false,
+        consoleTimestamp: "",
+        consoleEvidence: "",
+        passCount: 0,
+        errorCount: 0,
+        lastError: ""
+      }
+
+    ];
+
+    // Local state & telemetry state
+    const STORAGE_KEY = "ValheimWorkers_VerificationSuite_v4";
+    let activeFilter = "all";
+    let consoleFilter = "all";
+    let autoPassOnConsole = localStorage.getItem("ValheimWorkers_AutoPass") !== "false";
+    let lastTelemetrySeq = -1;
+    let liveLogs = [];
+    let liveErrors = [];
+    let liveWorkers = [];
+    let liveCommandTraces = [];
+    let expandedTraces = {};
+    let lastTelemetryPayload = null;
+    let lastTransportMode = "none";
+    let lastPingMs = -1;
+    let lastHttpSuccessTime = 0;
+
+    function loadSavedState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          testCases.forEach(tc => {
+            if (parsed[tc.id]) {
+              tc.status = parsed[tc.id].status || "untested";
+              tc.manualOverride = !!parsed[tc.id].manualOverride;
+              tc.notes = parsed[tc.id].notes || "";
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Could not load test suite state from localStorage:", e);
+      }
+      updateAutoPassUI();
+    }
+
+    function saveState() {
+      try {
+        const stateToSave = {};
+        testCases.forEach(tc => {
+          stateToSave[tc.id] = {
+            status: tc.status,
+            manualOverride: tc.manualOverride,
+            notes: tc.notes
+          };
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn("Could not save test suite state to localStorage:", e);
+      }
+      updateMetrics();
+    }
+
+    function toggleAutoPass() {
+      autoPassOnConsole = !autoPassOnConsole;
+      localStorage.setItem("ValheimWorkers_AutoPass", autoPassOnConsole ? "true" : "false");
+      updateAutoPassUI();
+      if (autoPassOnConsole) {
+        testCases.forEach(tc => {
+          if (tc.consoleVerified && !tc.manualOverride) {
+            tc.status = "passed";
+          }
+        });
+        saveState();
+        renderTestCards();
+      }
+    }
+
+    function updateAutoPassUI() {
+      const btn = document.getElementById("autoPassToggleBtn");
+      const lbl = document.getElementById("autoPassLabel");
+      if (autoPassOnConsole) {
+        btn.className = "px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-medium transition flex items-center gap-1.5";
+        lbl.textContent = "Auto-Pass on Console Proof: ON";
+      } else {
+        btn.className = "px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)] font-medium transition flex items-center gap-1.5";
+        lbl.textContent = "Auto-Pass on Console Proof: OFF";
+      }
+    }
+
+    function updateMetrics() {
+      const total = testCases.length;
+      const passed = testCases.filter(t => t.status === "passed").length;
+      const failed = testCases.filter(t => t.status === "failed").length;
+      const untested = total - (passed + failed);
+      const pct = Math.round((passed / total) * 100);
+      const autoVerified = testCases.filter(t => t.consoleVerified).length;
+
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statPassed").textContent = passed;
+      document.getElementById("statFailed").textContent = failed;
+      document.getElementById("statUntested").textContent = untested;
+      document.getElementById("statPercent").textContent = `${pct}% complete`;
+
+      document.getElementById("progressBarLabel").textContent = `${passed} / ${total} Verified (${pct}%)`;
+      document.getElementById("progressBarFill").style.width = `${pct}%`;
+      document.getElementById("liveAutoVerifiedCount").textContent = `${autoVerified} / ${total}`;
+    }
+
+    function setFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll(".filter-tab").forEach(tab => {
+        if (tab.getAttribute("data-filter") === filter) {
+          tab.className = "filter-tab active px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm";
+        } else {
+          tab.className = "filter-tab px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition";
+        }
+      });
+      renderTestCards();
+    }
+
+    function setConsoleFilter(filter) {
+      consoleFilter = filter;
+      const allBtn = document.getElementById("conFilterAll");
+      const verBtn = document.getElementById("conFilterVerify");
+      const errBtn = document.getElementById("conFilterErrors");
+
+      const activeCls = "px-2.5 py-1 rounded-md font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]";
+      const inactiveCls = "px-2.5 py-1 rounded-md font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]";
+
+      allBtn.className = filter === "all" ? activeCls : inactiveCls;
+      verBtn.className = filter === "verify" ? activeCls : inactiveCls;
+      errBtn.className = filter === "errors" ? activeCls : inactiveCls;
+      renderConsoleFeed();
+    }
+
+    function setStatus(id, newStatus) {
+      const tc = testCases.find(t => t.id === id);
+      if (tc) {
+        if (tc.status === newStatus) {
+          tc.status = "untested";
+          tc.manualOverride = false;
+        } else {
+          tc.status = newStatus;
+          tc.manualOverride = true;
+        }
+        saveState();
+        renderTestCards();
+      }
+    }
+
+    function updateNotes(id, text) {
+      const tc = testCases.find(t => t.id === id);
+      if (tc) {
+        tc.notes = text;
+        saveState();
+      }
+    }
+
+    // =========================================================================
+    // Live Telemetry Ingestion (HTTP 127.0.0.1:18788 + Local JS Script Fallback)
+    // =========================================================================
+    function formatAge(ms) {
+      if (ms < 0 || isNaN(ms)) return "just now";
+      const sec = Math.floor(ms / 1000);
+      if (sec < 2) return "just now";
+      if (sec < 60) return `${sec}s`;
+      const min = Math.floor(sec / 60);
+      const remSec = sec % 60;
+      return `${min}m ${remSec}s`;
+    }
+
+    function updateConnectionBadge() {
+      const pill = document.getElementById("syncStatusPill");
+      const dot = document.getElementById("syncStatusDot");
+      const txt = document.getElementById("syncStatusText");
+      const tsEl = document.getElementById("lastSyncTimestamp");
+      if (!pill || !dot || !txt) return;
+
+      const now = Date.now();
+      const payload = lastTelemetryPayload;
+
+      if (!payload) {
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+        txt.textContent = "Waiting for Valheim Console (127.0.0.1:18788)...";
+        if (tsEl) tsEl.textContent = "Last sync: Never";
+        return;
+      }
+
+      // Calculate data age from Unix timestamp
+      const dataAgeMs = payload.updatedUnixMs ? (now - payload.updatedUnixMs) : (now - (lastHttpSuccessTime || now));
+      const httpAgeMs = lastHttpSuccessTime ? (now - lastHttpSuccessTime) : 999999;
+      const isHttpAlive = (lastTransportMode === "http" && httpAgeMs < 5000);
+      const isDiskHeartbeatAlive = (payload.updatedUnixMs && dataAgeMs < 8000);
+
+      const worldText = payload.worldLoaded ? "World Active" : "Main Menu";
+
+      if (isHttpAlive) {
+        // 🟢 LIVE (HTTP Bridge)
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        const pingStr = lastPingMs >= 0 ? ` • ${lastPingMs}ms` : "";
+        txt.textContent = `LIVE Console Connected (127.0.0.1:18788${pingStr} • ${worldText})`;
+        if (tsEl) tsEl.textContent = `Last sync: ${payload.updatedAt || 'Now'} (${formatAge(dataAgeMs)} ago)`;
+      } else if (isDiskHeartbeatAlive) {
+        // 🟢 LIVE (Disk Heartbeat)
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        txt.textContent = `LIVE via Disk Heartbeat (${formatAge(dataAgeMs)} ago • ${worldText})`;
+        if (tsEl) tsEl.textContent = `Last sync: ${payload.updatedAt || 'Now'} (${formatAge(dataAgeMs)} ago)`;
+      } else {
+        // 🔴 OFFLINE (Cached Snapshot)
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30";
+        dot.className = "w-2 h-2 rounded-full bg-rose-400";
+        txt.textContent = `OFFLINE • Cached Snapshot from ${payload.updatedAt || 'Earlier'} (${formatAge(dataAgeMs)} ago)`;
+        if (tsEl) tsEl.textContent = `Last sync: ${payload.updatedAt || 'Earlier'} (${formatAge(dataAgeMs)} ago)`;
+      }
+    }
+
+    async function manualSyncConsole() {
+      const btn = document.getElementById("manualSyncBtn");
+      const icon = document.getElementById("manualSyncIcon");
+      const label = document.getElementById("manualSyncLabel");
+
+      if (btn) btn.disabled = true;
+      if (icon) icon.className = "inline-block animate-spin";
+      if (label) label.textContent = "Syncing...";
+
+      const t0 = performance.now();
+      let success = false;
+
+      // Tier 1: Try Live HTTP Fetch (127.0.0.1:18788/api/sync)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch(`http://127.0.0.1:18788/api/sync?t=${Date.now()}`, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const ping = Math.round(performance.now() - t0);
+          const data = await res.json();
+          lastPingMs = ping;
+          lastHttpSuccessTime = Date.now();
+          applyTelemetryPayload(data, "http");
+          success = true;
+          showToast("⚡", `Live Console Synced! (127.0.0.1:18788 • ${ping}ms • ${data.worldLoaded ? 'In-Game World' : 'Main Menu'} • ${data.activeWorkers ?? 0} Workers)`);
+        }
+      } catch (err) {
+        // Fetch failed (e.g. CORS/PNA on file:// or server offline)
+      }
+
+      // Tier 2: Try CORS-exempt HTTP script tag (127.0.0.1:18788/api/telemetry.js)
+      if (!success) {
+        try {
+          const oldScript = document.getElementById("dynamicHttpScript");
+          if (oldScript) oldScript.remove();
+
+          const httpScriptSuccess = await new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.id = "dynamicHttpScript";
+            script.src = `http://127.0.0.1:18788/api/telemetry.js?t=${Date.now()}`;
+            const timer = setTimeout(() => {
+              script.remove();
+              resolve(false);
+            }, 1200);
+
+            script.onload = () => {
+              clearTimeout(timer);
+              resolve(true);
+            };
+            script.onerror = () => {
+              clearTimeout(timer);
+              resolve(false);
+            };
+            document.body.appendChild(script);
+          });
+
+          if (httpScriptSuccess && window.__VALHEIM_TELEMETRY__) {
+            const data = window.__VALHEIM_TELEMETRY__;
+            const ping = Math.round(performance.now() - t0);
+            lastPingMs = ping;
+            lastHttpSuccessTime = Date.now();
+            applyTelemetryPayload(data, "http");
+            success = true;
+            showToast("⚡", `Live Console Synced via Script! (127.0.0.1:18788 • ${ping}ms • ${data.worldLoaded ? 'In-Game World' : 'Main Menu'} • ${data.activeWorkers ?? 0} Workers)`);
+          }
+        } catch (e) {
+          // HTTP script failed
+        }
+      }
+
+      // Tier 3: Fall back to local verification_telemetry.js
+      if (!success) {
+        try {
+          const oldFileScript = document.getElementById("dynamicTelemetryScript");
+          if (oldFileScript) oldFileScript.remove();
+
+          await new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.id = "dynamicTelemetryScript";
+            script.src = `verification_telemetry.js?t=${Date.now()}`;
+            const timer = setTimeout(() => resolve(false), 1200);
+            script.onload = () => {
+              clearTimeout(timer);
+              resolve(true);
+            };
+            script.onerror = () => {
+              clearTimeout(timer);
+              resolve(false);
+            };
+            document.body.appendChild(script);
+          });
+
+          if (window.__VALHEIM_TELEMETRY__) {
+            const data = window.__VALHEIM_TELEMETRY__;
+            const fileAgeMs = data.updatedUnixMs ? (Date.now() - data.updatedUnixMs) : 999999;
+            applyTelemetryPayload(data, "file");
+
+            if (fileAgeMs < 8000) {
+              success = true;
+              showToast("🟢", `Synced with Active Game! (Disk heartbeat ${formatAge(fileAgeMs)} ago • ${data.activeWorkers ?? 0} Workers)`);
+            } else {
+              lastTransportMode = "stale";
+              updateConnectionBadge();
+              showToast("📂", `Telemetry Refreshed! (Loaded snapshot from ${data.updatedAt || 'earlier'} • ${formatAge(fileAgeMs)} ago • ${data.activeWorkers ?? 0} Workers)`);
+            }
+          } else {
+            showToast("❌", "Valheim telemetry file not found. Launch Valheim to generate telemetry.");
+          }
+        } catch (e) {
+          showToast("❌", "Could not load verification telemetry.");
+        }
+      }
+
+      setTimeout(() => {
+        if (btn) btn.disabled = false;
+        if (icon) icon.className = "";
+        if (label) label.textContent = "Sync Console Now";
+      }, 300);
+    }
+
+    function applyTelemetryPayload(payload, transportMode) {
+      if (!payload || typeof payload !== "object") return;
+
+      const lastResetTime = parseInt(localStorage.getItem("ValheimWorkers_LastReset") || "0", 10);
+      if (payload.updatedUnixMs && payload.updatedUnixMs < lastResetTime && transportMode === "file") {
+        return;
+      }
+
+      lastTelemetryPayload = payload;
+      lastTransportMode = transportMode;
+      if (transportMode === "http") {
+        lastHttpSuccessTime = Date.now();
+      }
+
+      updateConnectionBadge();
+
+      document.getElementById("liveWorkerCount").textContent = payload.activeWorkers ?? 0;
+
+      const errCount = (payload.errors && payload.errors.length) || payload.errorCount || 0;
+      const errCountEl = document.getElementById("liveErrorCount");
+      const errPillEl = document.getElementById("liveErrorPill");
+      errCountEl.textContent = errCount;
+      if (errCount > 0) {
+        errCountEl.className = "font-bold text-rose-400";
+        errPillEl.className = "px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/40 flex items-center gap-1.5";
+      } else {
+        errCountEl.className = "font-bold text-emerald-400";
+        errPillEl.className = "px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-center gap-1.5";
+      }
+
+      let anyCardChanged = false;
+      let newlyVerifiedTitles = [];
+
+      if (payload.tests) {
+        testCases.forEach(tc => {
+          const remote = payload.tests[tc.id];
+          if (!remote) return;
+
+          const wasVerified = tc.consoleVerified;
+          const isNowVerified = remote.status === "passed";
+          const isNowFailed = remote.status === "failed";
+
+          if (
+            tc.consoleVerified !== isNowVerified ||
+            tc.consoleEvidence !== (remote.evidence || "") ||
+            tc.passCount !== (remote.passCount || 0) ||
+            tc.errorCount !== (remote.errorCount || 0)
+          ) {
+            anyCardChanged = true;
+          }
+
+          tc.consoleVerified = isNowVerified;
+          tc.consoleTimestamp = remote.timestamp || "";
+          tc.consoleEvidence = remote.evidence || "";
+          tc.passCount = remote.passCount || 0;
+          tc.errorCount = remote.errorCount || 0;
+          tc.lastError = remote.lastError || "";
+
+          if (isNowVerified && !wasVerified) {
+            newlyVerifiedTitles.push(tc.title);
+          }
+
+          // Auto-update status if not manually overridden
+          if (!tc.manualOverride) {
+            if (isNowFailed || tc.errorCount > 0) {
+              tc.status = "failed";
+              anyCardChanged = true;
+            } else if (isNowVerified && autoPassOnConsole && tc.status !== "passed") {
+              tc.status = "passed";
+              anyCardChanged = true;
+            }
+          }
+        });
+      }
+
+      if (Array.isArray(payload.logs)) {
+        liveLogs = payload.logs;
+      }
+      if (Array.isArray(payload.errors)) {
+        liveErrors = payload.errors;
+      }
+      if (Array.isArray(payload.workers)) {
+        liveWorkers = payload.workers;
+      }
+      if (Array.isArray(payload.commandTraces)) {
+        liveCommandTraces = payload.commandTraces;
+      }
+
+      renderNpcTracker();
+
+      if (payload.seq !== lastTelemetrySeq || anyCardChanged) {
+        lastTelemetrySeq = payload.seq;
+        saveState();
+        renderTestCards();
+        renderConsoleFeed();
+      }
+
+      if (newlyVerifiedTitles.length > 0) {
+        showToast("⚡", `Console verified: ${newlyVerifiedTitles[0]}${newlyVerifiedTitles.length > 1 ? ` (+${newlyVerifiedTitles.length - 1} more)` : ''}`);
+      }
+    }
+
+    async function pollTelemetry() {
+      const t0 = performance.now();
+      // Tier 1: Try Live HTTP Bridge direct fetch (127.0.0.1:18788)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000);
+        const res = await fetch("http://127.0.0.1:18788/api/telemetry?t=" + Date.now(), {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          lastPingMs = Math.round(performance.now() - t0);
+          lastHttpSuccessTime = Date.now();
+          const data = await res.json();
+          applyTelemetryPayload(data, "http");
+          return;
+        }
+      } catch (err) {
+        // Fetch failed (CORS/PNA on file:// or server offline)
+      }
+
+      // Tier 2: Try CORS-exempt HTTP script tag (127.0.0.1:18788/api/telemetry.js)
+      try {
+        const oldHttpScript = document.getElementById("pollHttpScript");
+        if (oldHttpScript) oldHttpScript.remove();
+
+        const script = document.createElement("script");
+        script.id = "pollHttpScript";
+        script.src = "http://127.0.0.1:18788/api/telemetry.js?t=" + Date.now();
+        script.onload = function() {
+          if (window.__VALHEIM_TELEMETRY__) {
+            lastHttpSuccessTime = Date.now();
+            applyTelemetryPayload(window.__VALHEIM_TELEMETRY__, "http");
+          }
+        };
+        script.onerror = function() {
+          loadLocalFileScript();
+        };
+        document.body.appendChild(script);
+        return;
+      } catch (e) {
+        // HTTP script tag failed, fall back to Tier 3
+      }
+
+      loadLocalFileScript();
+    }
+
+    function loadLocalFileScript() {
+      try {
+        const oldScript = document.getElementById("dynamicTelemetryScript");
+        if (oldScript) oldScript.remove();
+
+        const script = document.createElement("script");
+        script.id = "dynamicTelemetryScript";
+        script.src = "verification_telemetry.js?t=" + Date.now();
+        script.onload = function() {
+          if (window.__VALHEIM_TELEMETRY__) {
+            applyTelemetryPayload(window.__VALHEIM_TELEMETRY__, "file");
+          }
+        };
+        script.onerror = function() {
+          updateConnectionBadge();
+        };
+        document.body.appendChild(script);
+      } catch (e) {
+        updateConnectionBadge();
+      }
+    }
+
+    function handleManualJsonUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          applyTelemetryPayload(data, "file");
+          showToast("📂", "Loaded verification_telemetry.json successfully!");
+        } catch (err) {
+          showToast("⚠️", "Invalid JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function renderConsoleFeed() {
+      const box = document.getElementById("consoleFeedBox");
+      const badge = document.getElementById("consoleFeedCountBadge");
+
+      let entries = [];
+
+      if (consoleFilter === "errors") {
+        entries = liveErrors.map(e => ({
+          time: e.time,
+          level: "ERROR",
+          source: e.type || "Exception",
+          message: `${e.message}${e.relatedTestId ? ` [Test: ${e.relatedTestId}]` : ''}`,
+          stack: e.stackTrace
+        }));
+      } else if (consoleFilter === "verify") {
+        entries = liveLogs.filter(l => l.level === "VERIFY" || l.level === "FAIL" || l.level === "ERROR");
+      } else {
+        entries = liveLogs;
+      }
+
+      badge.textContent = `${liveLogs.length} logs • ${liveErrors.length} errors`;
+
+      if (entries.length === 0) {
+        box.innerHTML = `<div class="text-[var(--muted-foreground)]">No matching console entries recorded yet.</div>`;
+        return;
+      }
+
+      box.innerHTML = entries.slice().reverse().map(entry => {
+        let colorCls = "text-[var(--muted-foreground)]";
+        let badgeCls = "bg-slate-500/10 text-slate-400 border-slate-500/20";
+
+        if (entry.level === "VERIFY") {
+          colorCls = "text-emerald-400 font-medium";
+          badgeCls = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+        } else if (entry.level === "ERROR" || entry.level === "FAIL") {
+          colorCls = "text-rose-400 font-medium";
+          badgeCls = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+        } else if (entry.level === "NPC") {
+          colorCls = "text-sky-300";
+          badgeCls = "bg-sky-500/10 text-sky-400 border-sky-500/20";
+        }
+
+        return `
+          <div class="py-1 border-b border-[var(--border)] last:border-none flex items-start gap-2">
+            <span class="text-[var(--muted-foreground)] shrink-0">[${escapeHtml(entry.time)}]</span>
+            <span class="px-1.5 py-0.2 rounded border text-xs shrink-0 ${badgeCls}">${escapeHtml(entry.level)}</span>
+            <span class="font-semibold text-[var(--foreground)] shrink-0">${escapeHtml(entry.source)}:</span>
+            <span class="${colorCls} break-all">${escapeHtml(entry.message)}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function toggleTraceExpand(traceId) {
+      const current = expandedTraces[traceId];
+      if (current === undefined) {
+        // If not explicitly set, determine whether it was the first trace (which defaulted to true)
+        const isFirst = liveCommandTraces.length > 0 && liveCommandTraces[liveCommandTraces.length - 1].id === traceId;
+        expandedTraces[traceId] = !isFirst;
+      } else {
+        expandedTraces[traceId] = !current;
+      }
+      renderNpcTracker();
+    }
+
+    function renderNpcTracker() {
+      const badgeEl = document.getElementById("trackerStatsBadge");
+      const workersBox = document.getElementById("activeWorkersContainer");
+      const tracesBox = document.getElementById("commandTracesContainer");
+      if (!badgeEl || !workersBox || !tracesBox) return;
+
+      badgeEl.textContent = `${liveWorkers.length} active worker${liveWorkers.length === 1 ? '' : 's'} • ${liveCommandTraces.length} recorded trace${liveCommandTraces.length === 1 ? '' : 's'}`;
+
+      // 1. Render Active Workers Live State Cards
+      if (!liveWorkers || liveWorkers.length === 0) {
+        workersBox.innerHTML = `
+          <div class="text-[var(--muted-foreground)] text-xs col-span-full bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            No workers currently active in game session. Spawn or hire workers in Valheim to see live status cards here.
+          </div>
+        `;
+      } else {
+        workersBox.innerHTML = liveWorkers.map(w => {
+          const maxHp = w.maxHealth > 0 ? w.maxHealth : 50;
+          const hpPct = Math.max(0, Math.min(100, Math.round(((w.health || 0) / maxHp) * 100)));
+          let hpColor = "text-emerald-400";
+          let hpBarBg = "bg-emerald-500";
+          if (hpPct < 35) {
+            hpColor = "text-rose-400 font-bold";
+            hpBarBg = "bg-rose-500";
+          } else if (hpPct < 70) {
+            hpColor = "text-amber-400";
+            hpBarBg = "bg-amber-500";
+          }
+
+          let roleBadgeCls = "bg-sky-500/10 text-sky-400 border-sky-500/20";
+          if (w.role === "Miner") roleBadgeCls = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+          else if (w.role === "Lumberjack") roleBadgeCls = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+          else if (w.role === "Guard") roleBadgeCls = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+          else if (w.role === "Hunter") roleBadgeCls = "bg-red-500/10 text-red-400 border-red-500/20";
+          else if (w.role === "Farmer") roleBadgeCls = "bg-lime-500/10 text-lime-400 border-lime-500/20";
+          else if (w.role === "Cook") roleBadgeCls = "bg-orange-500/10 text-orange-400 border-orange-500/20";
+          else if (w.role === "Laborer" || w.role === "Hauler") roleBadgeCls = "bg-purple-500/10 text-purple-400 border-purple-500/20";
+
+          let stateBadgeCls = "bg-slate-500/10 text-slate-400 border-slate-500/20";
+          if (w.taskState === "Retreat") stateBadgeCls = "bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse";
+          else if (w.taskState === "Combat") stateBadgeCls = "bg-orange-500/15 text-orange-400 border-orange-500/30";
+          else if (w.taskState === "Follow") stateBadgeCls = "bg-indigo-500/15 text-indigo-400 border-indigo-500/30";
+          else if (w.taskState === "Gather") stateBadgeCls = "bg-teal-500/15 text-teal-400 border-teal-500/30";
+          else if (w.taskState === "Deposit") stateBadgeCls = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+
+          return `
+            <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 shadow-sm space-y-2 hover:border-[var(--primary)] transition">
+              <div class="flex items-center justify-between gap-1">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-semibold text-xs text-[var(--foreground)] truncate">${escapeHtml(w.name)}</span>
+                  <span class="px-1.5 py-0.2 rounded text-[10px] border font-medium ${roleBadgeCls}">${escapeHtml(w.role)}</span>
+                </div>
+                <span class="px-1.5 py-0.2 rounded text-[10px] border font-medium ${stateBadgeCls}">${escapeHtml(w.taskState || 'Idle')}</span>
+              </div>
+
+              <!-- Health Bar -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="text-[var(--muted-foreground)]">Health</span>
+                  <span class="${hpColor} font-mono">${Math.round(w.health || 0)} / ${Math.round(maxHp)} HP (${hpPct}%)</span>
+                </div>
+                <div class="w-full bg-[var(--background)] h-1.5 rounded-full overflow-hidden border border-[var(--border)]">
+                  <div class="${hpBarBg} h-full transition-all duration-300" style="width: ${hpPct}%"></div>
+                </div>
+              </div>
+
+              <!-- Position & Distance -->
+              <div class="grid grid-cols-2 gap-1 text-[11px] bg-[var(--background)] p-1.5 rounded border border-[var(--border)] font-mono text-[var(--muted-foreground)]">
+                <div title="Worker Coordinates">📍 ${escapeHtml(w.pos || 'N/A')}</div>
+                <div title="Distance from Player">🏃 ${w.distPlayer >= 0 ? w.distPlayer.toFixed(1) + 'm to player' : 'N/A'}</div>
+                <div title="Distance from Assigned Work Post">🎯 ${w.distPost >= 0 ? w.distPost.toFixed(1) + 'm to post' : 'No post'}</div>
+                <div title="Operating Radius">⭕ r=${w.radius || 30}m</div>
+              </div>
+
+              <!-- Equipment & Inventory -->
+              <div class="text-[11px] space-y-0.5 text-[var(--muted-foreground)]">
+                <div><span class="text-[var(--foreground)] font-medium">Equipped:</span> ${escapeHtml(w.right || 'None')}${w.left ? ' / ' + escapeHtml(w.left) : ''}${w.armor ? ` (${escapeHtml(w.armor)})` : ''}</div>
+                <div class="truncate" title="${escapeHtml(w.carried || 'Empty')}"><span class="text-[var(--foreground)] font-medium">Carried:</span> ${escapeHtml(w.carried || 'Empty')}</div>
+              </div>
+
+              <!-- Active Command -->
+              <div class="pt-1 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
+                <span class="text-[var(--muted-foreground)] truncate"><span class="text-[var(--foreground)] font-medium">Cmd:</span> ${escapeHtml(w.activeCmdSummary || 'Autonomous')}</span>
+                ${w.activeCmdId ? `<span class="px-1.5 py-0.2 rounded bg-sky-500/10 border border-sky-500/20 text-sky-400 font-mono text-[10px] shrink-0">${escapeHtml(w.activeCmdId)}</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // 2. Render Chronological Command & Action Timeline Traces
+      if (!liveCommandTraces || liveCommandTraces.length === 0) {
+        tracesBox.innerHTML = `
+          <div class="text-[var(--muted-foreground)] text-xs bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            No commands recorded yet. Issue orders (Follow [E], Roster F8, Give Items, Proving Grounds) to record chronological action steps.
+          </div>
+        `;
+      } else {
+        // Show newest traces first
+        tracesBox.innerHTML = liveCommandTraces.slice().reverse().map((t, idx) => {
+          const isExpanded = expandedTraces[t.id] !== undefined ? expandedTraces[t.id] : (idx === 0);
+
+          let statusBadgeCls = "bg-sky-500/10 text-sky-400 border-sky-500/20";
+          if (t.status === "COMPLETED") statusBadgeCls = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+          else if (t.status === "WARNING_STALLED") statusBadgeCls = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+          else if (t.status === "FAILED") statusBadgeCls = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+          else if (t.status === "ACTIVE") statusBadgeCls = "bg-sky-500/15 text-sky-400 border-sky-500/30 animate-pulse";
+
+          let stepsHtml = "";
+          if (isExpanded) {
+            if (!t.steps || t.steps.length === 0) {
+              stepsHtml = `<div class="p-2 text-xs text-[var(--muted-foreground)] italic">Awaiting follow-up actions...</div>`;
+            } else {
+              stepsHtml = `
+                <div class="p-2.5 space-y-1.5 border-t border-[var(--border)] bg-[var(--background)] font-mono text-xs">
+                  ${t.steps.map(s => {
+                    let catCls = "bg-slate-500/15 text-slate-300 border-slate-500/30";
+                    if (s.cat === "CMD") catCls = "bg-sky-500/15 text-sky-400 border-sky-500/30";
+                    else if (s.cat === "STATE") catCls = "bg-teal-500/15 text-teal-400 border-teal-500/30";
+                    else if (s.cat === "EQUIP") catCls = "bg-purple-500/15 text-purple-400 border-purple-500/30";
+                    else if (s.cat === "SCAN") catCls = "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
+                    else if (s.cat === "MOVE") catCls = "bg-indigo-500/15 text-indigo-400 border-indigo-500/30";
+                    else if (s.cat === "HARVEST") catCls = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+                    else if (s.cat === "COMBAT") catCls = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+                    else if (s.cat === "INVENTORY") catCls = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+                    else if (s.cat === "UNSTUCK") catCls = "bg-orange-500/15 text-orange-400 border-orange-500/30 font-bold";
+                    else if (s.cat === "WARN") catCls = "bg-red-500/20 text-red-400 border-red-500/40 font-bold";
+
+                    return `
+                      <div class="flex items-start gap-2 py-0.5 border-b border-[var(--border)]/40 last:border-none">
+                        <span class="text-[var(--muted-foreground)] shrink-0 w-12 text-right">${escapeHtml(s.offset)}</span>
+                        <span class="px-1.5 py-0.2 rounded border text-[10px] shrink-0 ${catCls}">${escapeHtml(s.cat)}</span>
+                        <span class="text-[var(--foreground)] flex-1 break-words">${escapeHtml(s.msg)}</span>
+                        ${s.pos ? `<span class="text-[var(--muted-foreground)] text-[10px] shrink-0">${escapeHtml(s.pos)}</span>` : ''}
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              `;
+            }
+          }
+
+          return `
+            <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg overflow-hidden shadow-sm">
+              <div onclick="toggleTraceExpand('${escapeHtml(t.id)}')" class="p-2.5 cursor-pointer hover:bg-[var(--background)] transition flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                  <span class="px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-500/30 text-sky-400 font-mono text-xs font-bold">${escapeHtml(t.id)}</span>
+                  <span class="text-xs text-[var(--muted-foreground)] font-mono">[${escapeHtml(t.startedAt)}]</span>
+                  <span class="text-xs font-semibold text-[var(--foreground)]">${escapeHtml(t.worker)}</span>
+                  <span class="px-1.5 py-0.2 rounded text-[10px] border font-medium bg-slate-500/10 text-slate-400 border-slate-500/20">${escapeHtml(t.role)}</span>
+                  <span class="text-xs text-[var(--foreground)] font-medium">›</span>
+                  <span class="text-xs text-[var(--foreground)] font-medium">${escapeHtml(t.cmd)}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  ${t.testId ? `<span class="px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-mono">Test: ${escapeHtml(t.testId)}</span>` : ''}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold border ${statusBadgeCls}">${escapeHtml(t.status)}</span>
+                  <span class="text-xs text-[var(--muted-foreground)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}">▼</span>
+                </div>
+              </div>
+              ${t.outcome ? `
+                <div class="px-3 py-1 bg-[var(--background)]/70 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)] flex items-center justify-between">
+                  <span><span class="font-medium text-[var(--foreground)]">Outcome:</span> ${escapeHtml(t.outcome)}</span>
+                  <span class="text-[10px] font-mono text-[var(--muted-foreground)]">Initial: ${escapeHtml(t.initialState || 'N/A')}</span>
+                </div>
+              ` : ''}
+              ${stepsHtml}
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    function renderTestCards() {
+      const container = document.getElementById("testCardsContainer");
+      const search = (document.getElementById("searchInput").value || "").toLowerCase();
+
+      const filtered = testCases.filter(tc => {
+        const matchesFilter = (activeFilter === "all") || (tc.category === activeFilter);
+        const matchesSearch = !search || 
+          tc.id.toLowerCase().includes(search) ||
+          tc.title.toLowerCase().includes(search) || 
+          tc.steps.toLowerCase().includes(search) || 
+          tc.expected.toLowerCase().includes(search) ||
+          tc.categoryTitle.toLowerCase().includes(search) ||
+          (tc.consoleEvidence && tc.consoleEvidence.toLowerCase().includes(search));
+        return matchesFilter && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 text-center text-sm text-[var(--muted-foreground)]">
+            No test cases match your current filter or search criteria.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(tc => {
+        const isPassed = tc.status === "passed";
+        const isFailed = tc.status === "failed";
+
+        let borderClass = "border-[var(--border)]";
+        let statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">Untested</span>`;
+
+        if (isPassed) {
+          borderClass = "border-emerald-500/50";
+          statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">${tc.consoleVerified && !tc.manualOverride ? '⚡ Auto-Passed' : '✓ Passed'}</span>`;
+        } else if (isFailed) {
+          borderClass = "border-rose-500/50";
+          statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30">✗ Failed / Bug</span>`;
+        }
+
+        // Console Telemetry Evidence Banner
+        let consoleBanner = "";
+        if (tc.errorCount > 0 && tc.lastError) {
+          consoleBanner = `
+            <div class="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-400 flex items-center justify-between gap-2">
+              <div>
+                <span class="font-bold">⚠️ Console Exception Recorded (${tc.errorCount}x):</span>
+                <span class="font-mono ml-1">${escapeHtml(tc.lastError)}</span>
+              </div>
+              <span class="font-mono shrink-0 text-rose-300">ID: ${tc.id}</span>
+            </div>
+          `;
+        } else if (tc.consoleVerified) {
+          consoleBanner = `
+            <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 flex items-center justify-between gap-2">
+              <div>
+                <span class="font-bold">⚡ Console Condition Met [${escapeHtml(tc.consoleTimestamp)}]:</span>
+                <span class="ml-1 text-[var(--foreground)]">${escapeHtml(tc.consoleEvidence)}</span>
+              </div>
+              <span class="font-mono shrink-0 text-emerald-400/80">${tc.passCount > 1 ? `(${tc.passCount}x)` : ''} ID: ${tc.id}</span>
+            </div>
+          `;
+        } else {
+          consoleBanner = `
+            <div class="px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-[var(--muted-foreground)] flex items-center justify-between gap-2">
+              <span>⏳ Awaiting in-game console trigger...</span>
+              <span class="font-mono">ID: ${tc.id}</span>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-[var(--card)] border ${borderClass} rounded-xl p-4 shadow-sm transition hover:shadow-md space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-mono text-[var(--muted-foreground)]">${tc.categoryTitle}</span>
+                <span class="text-xs text-[var(--muted-foreground)]">•</span>
+                <h3 class="text-sm font-semibold text-[var(--foreground)]">${tc.title}</h3>
+              </div>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                ${statusBadge}
+                <div class="flex items-center border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--background)]">
+                  <button onclick="setStatus('${tc.id}', 'passed')" title="Mark as Passed" class="px-2.5 py-1 text-xs font-medium transition ${isPassed ? 'bg-emerald-600 text-white font-bold' : 'text-[var(--muted-foreground)] hover:text-emerald-400'}">
+                    ✓ Pass
+                  </button>
+                  <div class="w-[1px] h-4 bg-[var(--border)]"></div>
+                  <button onclick="setStatus('${tc.id}', 'failed')" title="Mark as Failed" class="px-2.5 py-1 text-xs font-medium transition ${isFailed ? 'bg-rose-600 text-white font-bold' : 'text-[var(--muted-foreground)] hover:text-rose-400'}">
+                    ✗ Fail
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            ${consoleBanner}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+              <div>
+                <span class="font-semibold text-[var(--foreground)]">Test Steps & Preconditions:</span>
+                <p class="text-[var(--muted-foreground)] mt-0.5"><span class="text-[var(--foreground)] font-medium">Setup:</span> ${tc.precondition}</p>
+                <p class="text-[var(--muted-foreground)] mt-0.5"><span class="text-[var(--foreground)] font-medium">Action:</span> ${tc.steps}</p>
+              </div>
+              <div>
+                <span class="font-semibold text-[var(--foreground)]">Expected Result:</span>
+                <p class="text-[var(--muted-foreground)] mt-0.5">${tc.expected}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-[var(--muted-foreground)] whitespace-nowrap">Notes / Observations:</span>
+              <input type="text" value="${escapeHtml(tc.notes)}" onchange="updateNotes('${tc.id}', this.value)" placeholder="Enter any manual notes, observed behavior, or bug details..." class="w-full text-xs px-2.5 py-1 rounded bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] placeholder-[var(--placeholder)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]">
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#039;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function showToast(icon, message) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toastIcon").textContent = icon;
+      document.getElementById("toastMsg").textContent = message;
+      toast.classList.remove("translate-y-16", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+      setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-16", "opacity-0");
+      }, 3000);
+    }
+
+    async function resetAllTests() {
+      if (confirm("Perform a clean restart of all 117 tests? This will reset all verification states to Untested across browser and live game session.")) {
+        const resetTime = Date.now();
+        localStorage.setItem("ValheimWorkers_LastReset", resetTime.toString());
+        localStorage.removeItem(STORAGE_KEY);
+
+        testCases.forEach(tc => {
+          tc.status = "untested";
+          tc.manualOverride = false;
+          tc.notes = "";
+          tc.consoleVerified = false;
+          tc.consoleTimestamp = "";
+          tc.consoleEvidence = "";
+          tc.passCount = 0;
+          tc.errorCount = 0;
+          tc.lastError = "";
+        });
+        liveLogs = [{ time: new Date().toLocaleTimeString(), level: "INFO", source: "Checklist", message: "Clean restart initiated. All 117 tests reset to Untested." }];
+        liveErrors = [];
+        liveWorkers = [];
+        liveCommandTraces = [];
+        expandedTraces = {};
+        lastTelemetryPayload = null;
+        lastTelemetrySeq = 1;
+        saveState();
+        renderTestCards();
+        renderConsoleFeed();
+        renderNpcTracker();
+
+        // Also tell live Valheim server to reset if connected
+        try {
+          const res = await fetch("http://127.0.0.1:18788/api/reset", { method: "POST" });
+          if (res.ok) {
+            const data = await res.json();
+            applyTelemetryPayload(data, "http");
+          }
+        } catch (e) {}
+
+        showToast("🔄", "All 117 tests clean-restarted! Ready for real-time verification.");
+      }
+    }
+
+    function exportMarkdownReport() {
+      const total = testCases.length;
+      const passed = testCases.filter(t => t.status === "passed");
+      const failed = testCases.filter(t => t.status === "failed");
+      const untested = testCases.filter(t => t.status === "untested");
+      const pct = Math.round((passed.length / total) * 100);
+
+      let md = `# ValheimWorkers Verification & Console Telemetry Report\n`;
+      md += `*Generated: ${new Date().toLocaleString()}*\n\n`;
+      md += `### Summary\n`;
+      md += `- **Total Tests:** ${total}\n`;
+      md += `- **Passed:** ${passed.length} (${pct}%)\n`;
+      md += `- **Failed / Bugs:** ${failed.length}\n`;
+      md += `- **Untested:** ${untested.length}\n`;
+      md += `- **Captured Runtime Errors:** ${liveErrors.length}\n\n`;
+
+      if (failed.length > 0 || liveErrors.length > 0) {
+        md += `### ❌ Issues, Failed Tests & Runtime Exceptions\n`;
+        failed.forEach(t => {
+          md += `- **[FAIL] ${t.title}** (\`${t.id}\`)\n`;
+          if (t.lastError) md += `  - *Console Error:* ${t.lastError}\n`;
+          if (t.notes) md += `  - *Notes:* ${t.notes}\n`;
+        });
+        liveErrors.forEach(err => {
+          md += `- **[EXCEPTION ${err.time}]** ${err.message}\n`;
+        });
+        md += `\n`;
+      }
+
+      if (liveWorkers && liveWorkers.length > 0) {
+        md += `### 👥 Active NPCs Snapshot\n`;
+        liveWorkers.forEach(w => {
+          md += `- **${w.name}** (${w.role}) — State: \`${w.taskState || 'Idle'}\` | HP: ${Math.round(w.health || 0)}/${Math.round(w.maxHealth || 50)} | Pos: ${w.pos || 'N/A'} | Gear: ${w.right || 'None'}${w.left ? ' / ' + w.left : ''}${w.armor ? ` (${w.armor})` : ''} | Carried: ${w.carried || 'Empty'}${w.activeCmdSummary ? ` | Active Cmd: ${w.activeCmdSummary}` : ''}\n`;
+        });
+        md += `\n`;
+      }
+
+      if (liveCommandTraces && liveCommandTraces.length > 0) {
+        md += `### 🔍 Recorded Command & NPC Action Traces\n`;
+        liveCommandTraces.forEach(t => {
+          md += `- **[${t.status}] ${t.id}: ${t.cmd}** (Worker: ${t.worker} [${t.role}] at ${t.startedAt}${t.testId ? ` | Test: ${t.testId}` : ''})\n`;
+          if (t.outcome) md += `  - *Outcome:* ${t.outcome}\n`;
+          if (t.steps && t.steps.length > 0) {
+            t.steps.forEach(s => {
+              md += `  - \`${s.offset}\` [${s.cat}] ${s.msg}${s.pos ? ` (at ${s.pos})` : ''}\n`;
+            });
+          }
+        });
+        md += `\n`;
+      }
+
+      md += `### Detailed Checklist\n`;
+      testCases.forEach(t => {
+        const symbol = t.status === "passed" ? "[x]" : "[ ]";
+        const statusText = t.status === "passed" ? "PASSED" : (t.status === "failed" ? "FAILED" : "UNTESTED");
+        md += `- ${symbol} **[${statusText}]** ${t.title} (\`${t.id}\`)`;
+        if (t.consoleEvidence) md += ` — *Console Proof [${t.consoleTimestamp}]: ${t.consoleEvidence}*`;
+        if (t.notes) md += ` *(Note: ${t.notes})*`;
+        md += `\n`;
+      });
+
+      navigator.clipboard.writeText(md).then(() => {
+        showToast("📋", "Markdown report (with console evidence) copied to clipboard!");
+      }).catch(err => {
+        console.error(err);
+        showToast("⚠️", "Could not write to clipboard automatically.");
+      });
+    }
+
+    // Initialize
+    loadSavedState();
+    updateThemeUI();
+    updateMetrics();
+    renderTestCards();
+    renderNpcTracker();
+
+    // Check if initial window.__VALHEIM_TELEMETRY__ was loaded from verification_telemetry.js
+    if (window.__VALHEIM_TELEMETRY__) {
+      applyTelemetryPayload(window.__VALHEIM_TELEMETRY__, "file");
+    }
+
+    // Poll every 1.4 seconds
+    setInterval(pollTelemetry, 1400);
+    pollTelemetry();
+
+    // Live heartbeat age ticker every 1.0 second
+    setInterval(updateConnectionBadge, 1000);
+  </script>
+</body>
+</html>

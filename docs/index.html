@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ValheimWorkers Documentation Portal & Interactive Suite</title>
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --card-bg: #141923;
+      --card-border: #2c251d;
+      --accent-gold: #e2b76e;
+      --accent-rust: #c8683e;
+      --accent-cyan: #55c9ea;
+      --text-main: #f0eae1;
+      --text-dim: #9ba3b0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1080px;
+      width: 100%;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: rgba(226, 183, 110, 0.12);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--accent-gold);
+      margin-bottom: 12px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    p.subtitle {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-gold);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    }
+    .card-icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: #242c3d;
+      color: var(--accent-cyan);
+    }
+    .card-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+    .card-action {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: #5d6778;
+      border-top: 1px solid #1a212d;
+      padding-top: 24px;
+      width: 100%;
+    }
+    footer a { color: var(--accent-gold); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">ValheimWorkers v0.3.0</div>
+      <h1>THE SETTLEMENT STEWARD'S CODEX</h1>
+      <p class="subtitle">
+        Authoritative domain specification, vector infographic blueprints, in-game verification telemetry, and interactive character sheet previews.
+      </p>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="codex/ValheimWorkers_Guide_Book.html" target="_blank">
+        <div class="card-icon">📖</div>
+        <div class="card-title">22-Page Visual Codex <span class="tag">HTML</span></div>
+        <div class="card-desc">
+          Complete high-fidelity guide book featuring carved runestone pages, Norse typography, 10 specialist worker roles, and vector architectural schemas.
+        </div>
+        <div class="card-action">Open Guide Book &rarr;</div>
+      </a>
+
+      <a class="card" href="codex/ValheimWorkers_Guide_Book.pdf" target="_blank">
+        <div class="card-icon">📜</div>
+        <div class="card-title">Codex PDF Edition <span class="tag">14.8 MB</span></div>
+        <div class="card-desc">
+          Printable vector compendium containing the full 22-page blueprint elevations, macro production web, and domain operating laws.
+        </div>
+        <div class="card-action">Download PDF &rarr;</div>
+      </a>
+
+      <a class="card" href="interactive/worker_feature_map.html" target="_blank">
+        <div class="card-icon">🗺️</div>
+        <div class="card-title">Capability Matrix <span class="tag">Interactive</span></div>
+        <div class="card-desc">
+          Interactive matrix categorizing 36 autonomous worker features across 8 domains, with searchable tags and 9 vector process schemas.
+        </div>
+        <div class="card-action">Launch Matrix Viewer &rarr;</div>
+      </a>
+
+      <a class="card" href="interactive/npc_character_menu_preview.html" target="_blank">
+        <div class="card-icon">🛡️</div>
+        <div class="card-title">NPC Character Sheet UI <span class="tag">Prototype</span></div>
+        <div class="card-desc">
+          High-fidelity prototype of the in-game Valheim UI drawer: Paperdoll equipment slots, 0–100 activity skills, and 4-branch XP skill tree graphs.
+        </div>
+        <div class="card-action">Explore UI Prototype &rarr;</div>
+      </a>
+
+      <a class="card" href="interactive/manual_verification_checklist.html" target="_blank">
+        <div class="card-icon">🧪</div>
+        <div class="card-title">Verification Checklist <span class="tag">QA Telemetry</span></div>
+        <div class="card-desc">
+          In-game test suite tracking pass/fail states across combat, farming, cooking, mining, and telemetry events for continuous quality assurance.
+        </div>
+        <div class="card-action">Open QA Checklist &rarr;</div>
+      </a>
+
+      <a class="card" href="interactive/stone_carving_lab.html" target="_blank">
+        <div class="card-icon">⚒️</div>
+        <div class="card-title">Viking Stone Carving Lab <span class="tag">CSS Tool</span></div>
+        <div class="card-desc">
+          Interactive typography, relief depth, and patina controller used to engineer the etched runestone aesthetics of the guide books.
+        </div>
+        <div class="card-action">Open Stone Lab &rarr;</div>
+      </a>
+    </div>
+
+    <footer>
+      ValheimWorkers mod for Valheim &bull; <a href="https://github.com/Kausiukas/valheim_npcs">GitHub Repository</a>
+    </footer>
+  </div>
+</body>
+</html>

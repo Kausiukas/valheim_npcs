@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ValheimWorkers - Player-Style NPC Character Menu & Skills Prototype</title>
+<style>
+  @font-face {
+    font-family: 'Norse';
+    src: local('Norse'), local('Norsebold'), sans-serif;
+  }
+  :root {
+    --valheim-gold: #FFBF1F;
+    --valheim-amber: #EB8F0D;
+    --valheim-parchment: #F0EAE1;
+    --valheim-silver: #B8B0A4;
+    --wood-dark: #1F140D;
+    --wood-mid: #2E1F14;
+    --wood-light: #442E1F;
+    --stone-dark: #1B1A18;
+    --stone-mid: #2A2824;
+    --stone-light: #3D3934;
+    --crimson: #D9453B;
+    --meadow-green: #5BB347;
+    --eitr-cyan: #3DD9D6;
+    --slot-border: #4D3B2A;
+    --slot-bg: #14100C;
+    --slot-equipped: #257985;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0B0A09 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" opacity="0.05"><rect width="60" height="60" fill="%23FFFFFF"/></svg>');
+    color: var(--valheim-parchment);
+    font-family: 'Averia Serif Libre', 'Georgia', serif;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Norse', 'Trajan Pro', 'Georgia', serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .demo-header {
+    max-width: 1080px;
+    width: 100%;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .demo-header h1 {
+    color: var(--valheim-gold);
+    font-size: 28px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .demo-header p {
+    color: var(--valheim-silver);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+
+  /* Control bar */
+  .control-bar {
+    max-width: 1080px;
+    width: 100%;
+    background: var(--wood-dark);
+    border: 2px solid var(--wood-light);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .control-label {
+    font-size: 13px;
+    color: var(--valheim-gold);
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .pill-btn {
+    background: var(--stone-mid);
+    border: 1px solid var(--stone-light);
+    color: var(--valheim-silver);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    transition: all 0.15s ease;
+  }
+  .pill-btn:hover {
+    background: var(--stone-light);
+    color: #FFF;
+    border-color: var(--valheim-gold);
+  }
+  .pill-btn.active {
+    background: linear-gradient(180deg, #422D16 0%, #291B0E 100%);
+    border-color: var(--valheim-amber);
+    color: var(--valheim-gold);
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(235, 143, 13, 0.4);
+  }
+
+  /* Main window frame */
+  .valheim-window {
+    max-width: 1080px;
+    width: 100%;
+    background: radial-gradient(circle at 50% 20%, #2A1D13 0%, #150E09 100%);
+    border: 3px solid #5A402A;
+    outline: 2px solid #000;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.7);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Top Worker Banner */
+  .worker-banner {
+    background: linear-gradient(180deg, #3A2617 0%, #1E130B 100%);
+    border-bottom: 2px solid #5A402A;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .worker-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .worker-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    background: #0E0A07;
+    border: 2px solid var(--valheim-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.8);
+  }
+  .worker-titles h2 {
+    color: var(--valheim-gold);
+    font-size: 20px;
+    margin-bottom: 3px;
+  }
+  .worker-titles .badge-line {
+    font-size: 13px;
+    color: var(--valheim-silver);
+    display: flex;
+    gap: 10px;
+  }
+  .badge {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .badge-human { background: #3C2E1E; border: 1px solid #7D5A34; color: #FFE082; }
+  .badge-skel { background: #2E1818; border: 1px solid #8D3434; color: #FF8A80; }
+  .badge-dvergr { background: #1B2E2E; border: 1px solid #347E7D; color: #80DEEA; }
+
+  /* Level & XP bar */
+  .worker-progression {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+  }
+  .prog-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--valheim-silver);
+  }
+  .prog-text b { color: var(--valheim-gold); }
+  .valheim-bar {
+    width: 100%;
+    height: 12px;
+    background: #0E0906;
+    border: 1px solid #4D3B2A;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .valheim-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .fill-xp { background: linear-gradient(90deg, #EB8F0D 0%, #FFBF1F 100%); }
+  .fill-hp { background: linear-gradient(90deg, #A8201A 0%, #D9453B 100%); }
+  .fill-stam { background: linear-gradient(90deg, #CF8817 0%, #F5C542 100%); }
+  .fill-marrow { background: linear-gradient(90deg, #6B1111 0%, #B71C1C 100%); }
+  .fill-pride { background: linear-gradient(90deg, #2E7D32 0%, #66BB6A 100%); }
+
+  /* Top Right Action Buttons (Native InventoryGui Style) */
+  .top-action-icons {
+    display: flex;
+    gap: 8px;
+  }
+  .icon-nav-btn {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(180deg, #2D2721 0%, #1A1714 100%);
+    border: 2px solid #52473D;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .icon-nav-btn:hover {
+    border-color: var(--valheim-gold);
+    transform: translateY(-2px);
+  }
+  .icon-nav-btn.active {
+    border-color: var(--valheim-amber);
+    background: linear-gradient(180deg, #4A3319 0%, #261A0C 100%);
+    box-shadow: 0 0 10px rgba(235, 143, 13, 0.6);
+  }
+  .icon-badge-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--valheim-gold);
+    color: #000;
+    font-size: 10px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #000;
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.85; }
+  }
+
+  /* Navigation Tabs */
+  .valheim-tabs {
+    display: flex;
+    background: #140D08;
+    border-bottom: 2px solid #5A402A;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--valheim-silver);
+    font-family: 'Norse', 'Georgia', serif;
+    font-size: 16px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .tab-btn:hover {
+    background: rgba(255, 191, 31, 0.05);
+    color: #FFF;
+  }
+  .tab-btn.active {
+    background: linear-gradient(180deg, rgba(68,46,31,0.5) 0%, rgba(30,19,11,0.8) 100%);
+    color: var(--valheim-gold);
+    border-bottom-color: var(--valheim-amber);
+    font-weight: bold;
+  }
+
+  /* Content Panes */
+  .tab-content {
+    display: none;
+    padding: 20px;
+  }
+  .tab-content.active {
+    display: block;
+  }
+
+  /* ---------------- TAB 1: CHARACTER SHEET & PAPERDOLL ---------------- */
+  .char-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 20px;
+  }
+  @media (max-width: 900px) {
+    .char-grid { grid-template-columns: 1fr; }
+  }
+
+  .char-card {
+    background: rgba(20, 14, 9, 0.7);
+    border: 1px solid #4D3B2A;
+    border-radius: 6px;
+    padding: 14px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+  }
+  .card-title {
+    color: var(--valheim-gold);
+    font-size: 14px;
+    border-bottom: 1px solid #4D3B2A;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Paperdoll layout */
+  .paperdoll-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    padding: 10px 0;
+  }
+  .doll-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+  .doll-slot {
+    width: 60px;
+    height: 60px;
+    background: var(--slot-bg);
+    border: 2px solid var(--slot-border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .doll-slot:hover {
+    border-color: var(--valheim-gold);
+    background: #231B14;
+  }
+  .doll-slot.equipped {
+    border-color: var(--slot-equipped);
+    box-shadow: inset 0 0 8px rgba(37, 121, 133, 0.4);
+  }
+  .doll-slot .slot-icon { font-size: 24px; }
+  .doll-slot .slot-name { font-size: 9px; color: var(--valheim-silver); margin-top: 2px; text-align: center; }
+  .doll-slot .slot-tier {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 9px;
+    color: var(--valheim-gold);
+    font-weight: bold;
+  }
+
+  /* Sustenance & Food Slots */
+  .food-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .food-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #18110B;
+    border: 1px solid #3E2F20;
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+  .food-icon {
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    background: #0E0906;
+    border: 1px solid #5A402A;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .food-details { flex: 1; }
+  .food-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #FFF;
+    display: flex;
+    justify-content: space-between;
+  }
+  .food-stats {
+    font-size: 11px;
+    color: var(--valheim-silver);
+    margin-top: 2px;
+  }
+  .food-timer {
+    color: var(--valheim-gold);
+    font-size: 11px;
+  }
+
+  /* Combat & Work Attributes list */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(77, 59, 42, 0.5);
+    font-size: 13px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label {
+    color: var(--valheim-silver);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-val {
+    color: #FFF;
+    font-weight: bold;
+  }
+  .stat-val.gold { color: var(--valheim-gold); }
+  .stat-val.green { color: var(--meadow-green); }
+  .stat-val.crimson { color: var(--crimson); }
+  .stat-val.cyan { color: var(--eitr-cyan); }
+
+  /* Worker Backpack (8x4 grid) */
+  .backpack-section {
+    margin-top: 20px;
+    background: rgba(14, 10, 7, 0.85);
+    border: 1px solid #4D3B2A;
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .backpack-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .inv-slot {
+    aspect-ratio: 1;
+    background: var(--slot-bg);
+    border: 1px solid #3E2F20;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .inv-slot:hover {
+    border-color: var(--valheim-gold);
+    background: #1F1710;
+  }
+  .inv-slot.equipped {
+    border: 2px solid var(--slot-equipped);
+    box-shadow: inset 0 0 6px rgba(37, 121, 133, 0.5);
+  }
+  .inv-slot .item-count {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 11px;
+    color: #FFF;
+    font-weight: bold;
+    text-shadow: 0 1px 2px #000;
+  }
+
+  /* ---------------- TAB 2: VALHEIM SKILLSDIALOG VIEW ---------------- */
+  .skills-dialog-container {
+    background: rgba(18, 12, 8, 0.85);
+    border: 2px solid #4D3B2A;
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .skill-item-card {
+    background: #17100B;
+    border: 1px solid #3A2A1A;
+    border-radius: 4px;
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 44px 180px 1fr 220px;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.15s ease;
+  }
+  .skill-item-card:hover {
+    border-color: var(--valheim-amber);
+    background: #20160F;
+  }
+  .skill-icon-box {
+    width: 44px;
+    height: 44px;
+    background: #0E0906;
+    border: 1px solid #5A402A;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+  .skill-meta h4 {
+    color: #FFF;
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+  .skill-meta .skill-lvl-badge {
+    color: var(--valheim-gold);
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .skill-bars-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .skill-bonus-desc {
+    font-size: 12px;
+    color: var(--meadow-green);
+    line-height: 1.3;
+  }
+
+  /* ---------------- TAB 3: VISUAL SKILL TREE NODE GRAPH ---------------- */
+  .skill-tree-container {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+  }
+  @media (max-width: 900px) {
+    .skill-tree-container { grid-template-columns: 1fr; }
+  }
+  .tree-canvas-panel {
+    background: rgba(14, 10, 7, 0.9);
+    border: 2px solid #4D3B2A;
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .tree-branch-columns {
+    display: flex;
+    gap: 16px;
+    justify-content: space-around;
+  }
+  .tree-branch-col {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .branch-header {
+    text-align: center;
+    font-size: 13px;
+    color: var(--valheim-gold);
+    font-weight: bold;
+    border-bottom: 1px solid #4D3B2A;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+
+  /* Skill node element */
+  .tree-node {
+    width: 100%;
+    background: #17100B;
+    border: 2px solid #3A2A1A;
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .tree-node:hover {
+    transform: translateY(-2px);
+    border-color: var(--valheim-gold);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  }
+  .tree-node.unlocked {
+    border-color: var(--valheim-gold);
+    background: linear-gradient(180deg, #2D1E10 0%, #1A1108 100%);
+    box-shadow: 0 0 10px rgba(255, 191, 31, 0.25);
+  }
+  .tree-node.available {
+    border-color: var(--meadow-green);
+    border-style: dashed;
+    animation: nodePulse 2s infinite;
+  }
+  @keyframes nodePulse {
+    0%, 100% { border-color: var(--meadow-green); }
+    50% { border-color: #88FF88; box-shadow: 0 0 10px rgba(91, 179, 71, 0.5); }
+  }
+  .tree-node.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(80%);
+  }
+  .tree-node.selected {
+    outline: 2px solid #FFF;
+    border-color: var(--valheim-amber);
+  }
+  .node-icon { font-size: 24px; margin-bottom: 4px; }
+  .node-name { font-size: 12px; font-weight: bold; color: #FFF; }
+  .node-cost { font-size: 10px; color: var(--valheim-silver); margin-top: 2px; }
+
+  /* Connector line */
+  .tree-connector {
+    width: 2px;
+    height: 16px;
+    background: #5A402A;
+    margin: -8px 0;
+  }
+  .tree-connector.active {
+    background: var(--valheim-gold);
+    box-shadow: 0 0 6px var(--valheim-gold);
+  }
+
+  /* Node Inspector Card */
+  .node-inspector {
+    background: rgba(20, 14, 9, 0.9);
+    border: 2px solid #5A402A;
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .inspector-icon-box {
+    width: 60px;
+    height: 60px;
+    background: #0E0906;
+    border: 2px solid var(--valheim-gold);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin: 0 auto;
+  }
+  .unlock-btn {
+    background: linear-gradient(180deg, #EB8F0D 0%, #C46F00 100%);
+    border: 1px solid #FFBF1F;
+    color: #FFF;
+    font-family: 'Norse', 'Georgia', serif;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    transition: all 0.15s ease;
+  }
+  .unlock-btn:hover {
+    background: linear-gradient(180deg, #FF9E1B 0%, #D87B00 100%);
+    transform: translateY(-1px);
+  }
+  .unlock-btn:disabled {
+    background: #2A241F;
+    border-color: #4D3B2A;
+    color: #7D7065;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Instructions and notes */
+  .prototype-footer {
+    max-width: 1080px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #140E0A;
+    border: 1px solid #3E2F20;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--valheim-silver);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <h1><span>⚔️</span> VALHEIM WORKERS — PLAYER-STYLE CHARACTER MENU <span>🛡️</span></h1>
+  <p>Static Interactive Layout & Design Prototype | Dual In-World Hold [E] Drawer & F8 Settlement Inspector</p>
+</div>
+
+<!-- Switcher Control Bar -->
+<div class="control-bar">
+  <div class="control-group">
+    <span class="control-label">Lineage Heritage:</span>
+    <button class="pill-btn active" id="btn-heritage-human" onclick="setHeritage('human')">👨 Ragnar (Human Viking)</button>
+    <button class="pill-btn" id="btn-heritage-skel" onclick="setHeritage('skel')">💀 Ossuary Thrall (Skeleton)</button>
+    <button class="pill-btn" id="btn-heritage-dvergr" onclick="setHeritage('dvergr')">⛏️ Sindri (Dvergr Artisan)</button>
+  </div>
+  <div class="control-group">
+    <span class="control-label">View Mode:</span>
+    <button class="pill-btn active" id="btn-mode-full" onclick="setViewMode('full')">Full Inspector (F8)</button>
+    <button class="pill-btn" id="btn-mode-container" onclick="setViewMode('container')">Hold [E] Container Overlay</button>
+  </div>
+</div>
+
+<!-- Main Valheim Window -->
+<div class="valheim-window" id="main-window">
+
+  <!-- Top Worker Banner (Mirrors Valheim Player Header) -->
+  <div class="worker-banner">
+    <div class="worker-identity">
+      <div class="worker-avatar" id="avatar-icon">🧔</div>
+      <div class="worker-titles">
+        <h2 id="worker-name">Ragnar Iron-Hand</h2>
+        <div class="badge-line">
+          <span class="badge badge-human" id="worker-badge">Human Viking • Tier 3</span>
+          <span id="worker-role-display">Assigned Role: <b style="color:#FFF;">Lumberjack & Forager</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall Level & XP Progress -->
+    <div class="worker-progression">
+      <div class="prog-text">
+        <span>Overall Character Level</span>
+        <b id="worker-level-text">Lv. 12 (820 / 1,200 XP)</b>
+      </div>
+      <div class="valheim-bar">
+        <div class="valheim-bar-fill fill-xp" id="worker-xp-fill" style="width: 68%;"></div>
+      </div>
+      <div class="prog-text" style="margin-top:2px;">
+        <span style="color:var(--valheim-gold);">Available Skill Points:</span>
+        <b style="color:var(--valheim-gold);" id="worker-sp-text">★ 2 SP</b>
+      </div>
+    </div>
+
+    <!-- Top-Right Action Icons (Native InventoryGui Icons: Skills, Tree, Stats) -->
+    <div class="top-action-icons">
+      <div class="icon-nav-btn active" id="nav-btn-char" onclick="switchTab(0)" title="Character Sheet & Stats">
+        🛡️
+      </div>
+      <div class="icon-nav-btn" id="nav-btn-skills" onclick="switchTab(1)" title="Valheim Skills (0–100)">
+        ⚔️
+      </div>
+      <div class="icon-nav-btn" id="nav-btn-tree" onclick="switchTab(2)" title="Heritage Skill Tree & Evolution">
+        🌳
+        <div class="icon-badge-dot" id="sp-bubble">2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="valheim-tabs">
+    <button class="tab-btn active" id="tab-btn-0" onclick="switchTab(0)">🛡️ Character & Paperdoll</button>
+    <button class="tab-btn" id="tab-btn-1" onclick="switchTab(1)">⚔️ Valheim Skills (0–100)</button>
+    <button class="tab-btn" id="tab-btn-2" onclick="switchTab(2)">🌳 Skill Tree & Evolution</button>
+  </div>
+
+  <!-- ==================== TAB 0: CHARACTER SHEET & PAPERDOLL ==================== -->
+  <div class="tab-content active" id="pane-0">
+    <div class="char-grid">
+
+      <!-- Column 1: Equipped Paperdoll (Native Player Slots) -->
+      <div class="char-card">
+        <div class="card-title">
+          <span>EQUIPPED LOADOUT</span>
+          <span style="font-size:11px; color:var(--valheim-silver);">Right-Click To Unequip</span>
+        </div>
+
+        <div class="paperdoll-layout">
+          <!-- Row 1: Helmet -->
+          <div class="doll-row">
+            <div class="doll-slot equipped" title="Iron Helmet (+14 Armor)">
+              <div class="slot-icon">🪖</div>
+              <div class="slot-name">Iron Helm</div>
+              <div class="slot-tier">T3</div>
+            </div>
+          </div>
+
+          <!-- Row 2: Main Hand, Chest, Shield -->
+          <div class="doll-row">
+            <div class="doll-slot equipped" id="slot-mainhand" title="Blackmetal Axe (65 Slash, Tool Tier 4)">
+              <div class="slot-icon" id="icon-mainhand">🪓</div>
+              <div class="slot-name" id="name-mainhand">B.M. Axe</div>
+              <div class="slot-tier">T4</div>
+            </div>
+            <div class="doll-slot equipped" title="Iron Scale Mail (+14 Armor)">
+              <div class="slot-icon">🧥</div>
+              <div class="slot-name">Iron Chest</div>
+              <div class="slot-tier">T3</div>
+            </div>
+            <div class="doll-slot equipped" title="Banded Shield (48 Block Power)">
+              <div class="slot-icon">🛡️</div>
+              <div class="slot-name">Banded Shld</div>
+              <div class="slot-tier">T3</div>
+            </div>
+          </div>
+
+          <!-- Row 3: Legs -->
+          <div class="doll-row">
+            <div class="doll-slot equipped" title="Iron Greaves (+14 Armor)">
+              <div class="slot-icon">👖</div>
+              <div class="slot-name">Iron Legs</div>
+              <div class="slot-tier">T3</div>
+            </div>
+          </div>
+
+          <!-- Row 4: Cape, Bow, Ammo -->
+          <div class="doll-row">
+            <div class="doll-slot equipped" title="Wolf Cape (+4 Armor, Warmth)">
+              <div class="slot-icon">🧣</div>
+              <div class="slot-name">Wolf Cape</div>
+              <div class="slot-tier">T3</div>
+            </div>
+            <div class="doll-slot equipped" title="Huntsman Bow (42 Pierce)">
+              <div class="slot-icon">🏹</div>
+              <div class="slot-name">Huntsman</div>
+              <div class="slot-tier">T3</div>
+            </div>
+            <div class="doll-slot equipped" title="Ironhead Arrows (x64)">
+              <div class="slot-icon">🎯</div>
+              <div class="slot-name">Ironhead x64</div>
+              <div class="slot-tier">T3</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:11px; color:var(--valheim-silver); text-align:center; margin-top:8px;">
+          Auto-equips highest tier gear from backpack.
+        </div>
+      </div>
+
+      <!-- Column 2: Vitality, Sustenance & Mood (Heritage-Adaptive) -->
+      <div class="char-card">
+        <div class="card-title">
+          <span id="sustenance-header">VITALITY & SUSTENANCE</span>
+          <span style="font-size:11px; color:var(--valheim-gold);" id="sustenance-sub">3 Food Buffs Active</span>
+        </div>
+
+        <!-- Health Bar -->
+        <div style="margin-bottom:12px;">
+          <div class="prog-text">
+            <span>❤️ Health Points</span>
+            <b id="hp-val">165 / 165 HP</b>
+          </div>
+          <div class="valheim-bar" style="height:14px;">
+            <div class="valheim-bar-fill fill-hp" id="hp-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Secondary Bar: Stamina (Human) / Marrow Blood (Skel) / Eitr (Dvergr) -->
+        <div style="margin-bottom:16px;">
+          <div class="prog-text">
+            <span id="sec-bar-label">⚡ Stamina Reserve</span>
+            <b id="sec-bar-val">120 / 120 Stamina</b>
+          </div>
+          <div class="valheim-bar" style="height:14px;">
+            <div class="valheim-bar-fill fill-stam" id="sec-bar-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- 3 Sustenance / Food Slots -->
+        <div class="food-list" id="sustenance-slots-container">
+          <div class="food-item">
+            <div class="food-icon">🥩</div>
+            <div class="food-details">
+              <div class="food-title">
+                <span>Lox Meat Pie</span>
+                <span class="food-timer">⏱️ 22:15</span>
+              </div>
+              <div class="food-stats">+75 Max Health | +24 Stamina | 4 HP/tick</div>
+            </div>
+          </div>
+          <div class="food-item">
+            <div class="food-icon">🍲</div>
+            <div class="food-details">
+              <div class="food-title">
+                <span>Turnip Stew</span>
+                <span class="food-timer">⏱️ 16:40</span>
+              </div>
+              <div class="food-stats">+18 Max Health | +55 Stamina | 2 HP/tick</div>
+            </div>
+          </div>
+          <div class="food-item">
+            <div class="food-icon">🍯</div>
+            <div class="food-details">
+              <div class="food-title">
+                <span>Honey</span>
+                <span class="food-timer">⏱️ 08:05</span>
+              </div>
+              <div class="food-stats">+8 Max Health | +35 Stamina | 5 HP/tick</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pride / Dignity Bar -->
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid #3E2F20;" id="pride-section">
+          <div class="prog-text">
+            <span>👑 Worker Dignity & Pride</span>
+            <b style="color:var(--meadow-green);" id="pride-val">88% (Proud & Dedicated)</b>
+          </div>
+          <div class="valheim-bar" style="height:10px; margin-top:4px;">
+            <div class="valheim-bar-fill fill-pride" id="pride-fill" style="width: 88%;"></div>
+          </div>
+          <div style="font-size:11px; color:var(--valheim-silver); margin-top:4px;">
+            Specialists grumble if forced to do menial chores; appeased by fine food or mead.
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Combat & Work Attributes -->
+      <div class="char-card">
+        <div class="card-title">
+          <span>COMBAT & WORK ATTRIBUTES</span>
+          <span style="font-size:11px; color:var(--valheim-gold);">Computed Live</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">🛡️ Total Armor Rating:</span>
+          <span class="stat-val gold" id="attr-armor">46.0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">⚖️ Carried Weight:</span>
+          <span class="stat-val" id="attr-weight">134 / 350 kg</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">⚔️ Main Weapon Damage:</span>
+          <span class="stat-val crimson" id="attr-weapon">65 Slash</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🪓 Tool Tier:</span>
+          <span class="stat-val gold" id="attr-tool">Blackmetal (Tier 4)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🏹 Bow Damage / Draw:</span>
+          <span class="stat-val" id="attr-bow">42 Pierce (1.4s draw)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🛡️ Block / Parry Power:</span>
+          <span class="stat-val" id="attr-block">48 Block (x1.5 parry)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🥾 Movement Speed:</span>
+          <span class="stat-val green" id="attr-speed">111.2%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🔨 Work Efficiency:</span>
+          <span class="stat-val green" id="attr-efficiency">135.0%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🔥 Warmth & Comfort:</span>
+          <span class="stat-val" id="attr-warmth">Cold Immune (Wolf Cape)</span>
+        </div>
+
+        <div style="margin-top:14px; background:#120D09; border:1px solid #3E2F20; border-radius:4px; padding:8px;">
+          <div style="font-size:11px; color:var(--valheim-gold); font-weight:bold;">TACTICAL PROFILE:</div>
+          <div style="font-size:11px; color:var(--valheim-silver); margin-top:3px;" id="tactical-summary">
+            Prefers melee felling; draws Huntsman bow if hostile trolls or flying drakes enter perimeter.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Worker Backpack (8x4 Native Container Grid) -->
+    <div class="backpack-section">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:14px; color:var(--valheim-gold); font-weight:bold;">
+          WORKER BACKPACK (8x4 CONTAINER — Right-Click to Equip/Unequip)
+        </span>
+        <span style="font-size:12px; color:var(--valheim-silver);">Cyan highlight = currently equipped</span>
+      </div>
+
+      <div class="backpack-grid" id="backpack-grid">
+        <!-- 32 slots will be populated via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 1: VALHEIM SKILLSDIALOG VIEW ==================== -->
+  <div class="tab-content" id="pane-1">
+    <div class="skills-dialog-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #4D3B2A; padding-bottom:8px;">
+        <div>
+          <h3 style="color:var(--valheim-gold); font-size:16px;">⚔️ WORKER ACTIVITY SKILLS</h3>
+          <p style="font-size:12px; color:var(--valheim-silver); margin-top:2px;">
+            Skills level up organically from 0 to 100 as the worker performs tasks. Feeding action XP raises overall character level.
+          </p>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:13px; color:var(--valheim-gold); font-weight:bold;">Overall Character Level: 12</span>
+          <div style="font-size:11px; color:var(--valheim-silver);">820 / 1,200 XP toward Level 13</div>
+        </div>
+      </div>
+
+      <div class="skills-list" id="skills-list-container">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 2: VISUAL SKILL TREE & EVOLUTION ==================== -->
+  <div class="tab-content" id="pane-2">
+    <div class="skill-tree-container">
+
+      <!-- Left: Interactive Node-Graph Canvas -->
+      <div class="tree-canvas-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="color:var(--valheim-gold); font-size:15px;" id="tree-title">
+            🌳 HERITAGE SKILL TREE — HUMAN VIKING
+          </h3>
+          <span style="font-size:13px; color:var(--valheim-gold); font-weight:bold;" id="tree-sp-display">
+            Available: ★ 2 SP
+          </span>
+        </div>
+
+        <div class="tree-branch-columns" id="tree-columns-container">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Right: Selected Node Inspector Card -->
+      <div class="node-inspector">
+        <div class="card-title" style="margin-bottom:0;">
+          <span>SKILL INSPECTOR</span>
+          <span style="font-size:11px; color:var(--valheim-silver);" id="node-inspector-type">Node Details</span>
+        </div>
+
+        <div class="inspector-icon-box" id="node-insp-icon">🪓</div>
+
+        <div style="text-align:center;">
+          <h3 style="color:var(--valheim-gold); font-size:16px;" id="node-insp-title">Deep-Vein Strike</h3>
+          <div style="font-size:11px; color:var(--valheim-silver); margin-top:2px;" id="node-insp-branch">
+            Woodsman & Delver • Tier II
+          </div>
+        </div>
+
+        <div style="background:#140D08; border:1px solid #3E2F20; border-radius:4px; padding:10px; font-size:12px; line-height:1.4;" id="node-insp-desc">
+          Pickaxe hits deal +35% damage to Copper, Iron, and Silver veins. Unlocks specialist Mining role.
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Requirement:</span>
+          <span class="stat-val" id="node-insp-req">Axeman's Grip (Learned)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Cost:</span>
+          <span class="stat-val gold" id="node-insp-cost">1 Skill Point</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Current Status:</span>
+          <span class="stat-val green" id="node-insp-status">✔ ALREADY LEARNED</span>
+        </div>
+
+        <button class="unlock-btn" id="node-insp-btn" onclick="unlockCurrentSelectedNode()">
+          SKILL UNLOCKED
+        </button>
+
+        <div style="font-size:11px; color:var(--valheim-silver); text-align:center;">
+          Learned skills persist permanently across world saves.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer Notes -->
+<div class="prototype-footer">
+  <span>ValheimWorkers v1.3.0 | Static UI Prototype Preview</span>
+  <span>Click tabs, switch heritages, and test unlocking nodes in this mockup.</span>
+</div>
+
+<script>
+  let currentHeritage = 'human';
+  let currentTab = 0;
+  let availableSP = 2;
+  let marrowBlood = 65;
+  let dvergrGold = 45;
+
+  // Heritage profiles
+  const profiles = {
+    human: {
+      name: "Ragnar Iron-Hand",
+      avatar: "🧔",
+      badgeClass: "badge-human",
+      badgeText: "Human Viking • Tier 3 Specialist",
+      roleText: "Assigned Role: <b style='color:#FFF;'>Lumberjack & Forager</b>",
+      level: 12,
+      xpText: "Lv. 12 (820 / 1,200 XP)",
+      xpPct: 68,
+      sp: 2,
+      hp: "165 / 165 HP",
+      hpPct: 100,
+      secLabel: "⚡ Stamina Reserve",
+      secVal: "120 / 120 Stamina",
+      secPct: 100,
+      secFillClass: "fill-stam",
+      sustenanceHeader: "VITALITY & SUSTENANCE",
+      sustenanceSub: "3 Food Buffs Active",
+      foods: [
+        { icon: "🥩", name: "Lox Meat Pie", timer: "⏱️ 22:15", stats: "+75 Max Health | +24 Stamina | 4 HP/tick" },
+        { icon: "🍲", name: "Turnip Stew", timer: "⏱️ 16:40", stats: "+18 Max Health | +55 Stamina | 2 HP/tick" },
+        { icon: "🍯", name: "Honey", timer: "⏱️ 08:05", stats: "+8 Max Health | +35 Stamina | 5 HP/tick" }
+      ],
+      showPride: true,
+      prideVal: "88% (Proud & Dedicated)",
+      pridePct: 88,
+      armor: "46.0",
+      weight: "134 / 350 kg",
+      weapon: "65 Slash",
+      tool: "Blackmetal (Tier 4)",
+      bow: "42 Pierce (1.4s draw)",
+      block: "48 Block (x1.5 parry)",
+      speed: "111.2%",
+      efficiency: "135.0%",
+      warmth: "Cold Immune (Wolf Cape)",
+      tactical: "Prefers melee felling; draws Huntsman bow if hostile trolls or flying drakes enter perimeter.",
+      skills: [
+        { icon: "🪓", name: "Woodcutting", lvl: 42, xpCur: 68, xpNext: 43, bonus: "+21.0% Chop Damage, +10% Bonus Drop Chance" },
+        { icon: "⛏️", name: "Mining", lvl: 31, xpCur: 40, xpNext: 32, bonus: "+15.5% Pickaxe Damage to Ore Veins" },
+        { icon: "⚔️", name: "Melee Combat", lvl: 27, xpCur: 85, xpNext: 28, bonus: "+13.5% Slash/Blunt Damage & Stagger" },
+        { icon: "🛡️", name: "Blocking", lvl: 19, xpCur: 12, xpNext: 20, bonus: "+9.5% Shield Block Power" },
+        { icon: "🏹", name: "Bows & Archery", lvl: 14, xpCur: 50, xpNext: 15, bonus: "+8.4% Draw Speed & Pierce Damage" },
+        { icon: "🌾", name: "Farming & Foraging", lvl: 38, xpCur: 91, xpNext: 39, bonus: "+19.0% Harvest Speed, +8% Extra Seeds" },
+        { icon: "🔥", name: "Cooking & Crafting", lvl: 22, xpCur: 33, xpNext: 23, bonus: "+11.0% Smelt/Cook Speed, +5% Double Meat" },
+        { icon: "🥾", name: "Athletics & Hauling", lvl: 45, xpCur: 74, xpNext: 46, bonus: "+6.7% Movement Speed, +70kg Carry Cap" }
+      ],
+      treeTitle: "🌳 HERITAGE SKILL TREE — HUMAN VIKING",
+      branches: [
+        {
+          title: "🌲 Woodsman",
+          nodes: [
+            { id: "h_w_1", icon: "🪵", name: "Stick & Berry", tier: 1, cost: 0, status: "unlocked", desc: "Basic foraging instinct for branches and food." },
+            { id: "h_w_2", icon: "🪓", name: "Axeman's Grip", tier: 2, cost: 1, status: "unlocked", desc: "Allows swinging woodcutter's axes. Unlocks Lumberjack." },
+            { id: "h_w_3", icon: "🌲", name: "Hardwood Feller", tier: 3, cost: 2, status: "available", desc: "Fell Birch and Oak (FineWood). +25% carry cap." },
+            { id: "h_w_4", icon: "👑", name: "Yggdrasil Gift", tier: 4, cost: 3, status: "locked", desc: "Master woodcutter. 25% double wood yield." }
+          ]
+        },
+        {
+          title: "🌾 Hearth & Soil",
+          nodes: [
+            { id: "h_f_1", icon: "🥕", name: "Soil Tiller", tier: 1, cost: 0, status: "unlocked", desc: "Equips cultivators. Plants crops in cultivated dirt." },
+            { id: "h_f_2", icon: "🍲", name: "Spit Roast Master", tier: 2, cost: 1, status: "unlocked", desc: "Monitors cooking spits, pulling meat before it burns." },
+            { id: "h_f_3", icon: "🍺", name: "Fermenter Guard", tier: 3, cost: 2, status: "available", desc: "Tends mead cauldrons and barrels. +20% potion potency." },
+            { id: "h_f_4", icon: "🥖", name: "Grand Feast", tier: 4, cost: 3, status: "locked", desc: "Unlocks Oven baking. Food duration extended by 50%." }
+          ]
+        },
+        {
+          title: "🏹 Ranger & Scout",
+          nodes: [
+            { id: "h_r_1", icon: "🦌", name: "Track & Stalk", tier: 1, cost: 0, status: "unlocked", desc: "Hunts deer and boars with crude bow." },
+            { id: "h_r_2", icon: "🏹", name: "Dead-Eye Draw", tier: 2, cost: 1, status: "available", desc: "Draw speed +25%, ignores brush obstruction." },
+            { id: "h_r_3", icon: "🐺", name: "Pack Handler", tier: 3, cost: 2, status: "locked", desc: "Can command tamed wolves and boars." },
+            { id: "h_r_4", icon: "🦅", name: "Apex Marksman", tier: 4, cost: 3, status: "locked", desc: "Arrows pierce multiple targets with +40% stagger." }
+          ]
+        },
+        {
+          title: "⚔️ Shield-Wall",
+          nodes: [
+            { id: "h_s_1", icon: "🛡️", name: "Iron Stance", tier: 1, cost: 0, status: "unlocked", desc: "Equips shields and clubs to patrol home perimeter." },
+            { id: "h_s_2", icon: "💥", name: "Parry Riposte", tier: 2, cost: 1, status: "available", desc: "Staggers attacking enemies on timed block." },
+            { id: "h_s_3", icon: "🔨", name: "Base Builder", tier: 3, cost: 2, status: "locked", desc: "Repairs damaged walls and roofs automatically." },
+            { id: "h_s_4", icon: "⚡", name: "Einherjar Valor", tier: 4, cost: 3, status: "locked", desc: "Gains lightning damage aura when defending base." }
+          ]
+        }
+      ]
+    },
+
+    skel: {
+      name: "Ossuary Laborer #4",
+      avatar: "💀",
+      badgeClass: "badge-skel",
+      badgeText: "Risen Undead • Form II Sinew-Woven",
+      roleText: "Assigned Role: <b style='color:#FFF;'>Night Sentry & Hauler</b>",
+      level: 7,
+      xpText: "Form II: Sinew-Woven (65 / 100 Marrow Blood)",
+      xpPct: 65,
+      sp: 0,
+      hp: "140 / 140 HP",
+      hpPct: 100,
+      secLabel: "🩸 Marrow Blood Reservoir",
+      secVal: "65 / 100 Blood",
+      secPct: 65,
+      secFillClass: "fill-marrow",
+      sustenanceHeader: "OSSUARY BINDING & BLOOD GRAFTS",
+      sustenanceSub: "Undead Immune To Hunger & Cold",
+      foods: [
+        { icon: "🩸", name: "Marrow Reservoir", timer: "PERMANENT", stats: "Fed by Sacrificial Chalice (+0.5/hit in combat)" },
+        { icon: "🦴", name: "Barrow-Mule Graft", timer: "ACTIVE", stats: "+100kg Carry Weight | Never tires or sleeps" },
+        { icon: "🗡️", name: "Bone-Splinter Retaliation", timer: "ACTIVE", stats: "Reflects 15% melee damage back to attackers" }
+      ],
+      showPride: false,
+      armor: "28.0",
+      weight: "210 / 400 kg",
+      weapon: "45 Slash (Bronze Sword)",
+      tool: "Bronze Pickaxe (Tier 2)",
+      bow: "32 Pierce (Crude Bow)",
+      block: "35 Block (Bone Shield)",
+      speed: "105.0%",
+      efficiency: "100.0%",
+      warmth: "Undead (Immune to Cold & Wet)",
+      tactical: "Never sleeps, fatigues, or grumbles. Relentlessly guards perimeter and hauls ore through blizzards.",
+      skills: [
+        { icon: "🥾", name: "Tireless Hauling", lvl: 50, xpCur: 80, xpNext: 51, bonus: "Never loses stamina while carrying heavy burdens" },
+        { icon: "⚔️", name: "Undead Blade", lvl: 35, xpCur: 20, xpNext: 36, bonus: "+0.5 Marrow Blood & +2 HP per hit on living foes" },
+        { icon: "⛏️", name: "Ossuary Quarrying", lvl: 25, xpCur: 45, xpNext: 26, bonus: "+12.5% Pickaxe Damage against stone & copper" },
+        { icon: "🛡️", name: "Bone Ward", lvl: 20, xpCur: 30, xpNext: 21, bonus: "+10% Block Power with wooden/bone shields" },
+        { icon: "🪓", name: "Reaping Swing", lvl: 15, xpCur: 60, xpNext: 16, bonus: "Chops Beech and Fir trees through the night" },
+        { icon: "🏹", name: "Skeletal Marksmanship", lvl: 12, xpCur: 15, xpNext: 13, bonus: "Accurate bow fire with bronze/flint arrows" },
+        { icon: "🔥", name: "Kiln Feeder", lvl: 10, xpCur: 10, xpNext: 11, bonus: "Loads charcoal kilns without coughing on smoke" },
+        { icon: "🌾", name: "Crop Harvester", lvl: 5, xpCur: 5, xpNext: 6, bonus: "Collects ripe crops and stores them in pantry" }
+      ],
+      treeTitle: "💀 OSSUARY BLOOD-FORGE & SKELETON EVOLUTION",
+      branches: [
+        {
+          title: "🩸 Form Evolution",
+          nodes: [
+            { id: "s_f_1", icon: "🦴", name: "I. Rattling Thrall", tier: 1, cost: 0, status: "unlocked", desc: "Fragile bones, basic hauling." },
+            { id: "s_f_2", icon: "💀", name: "II. Sinew-Woven", tier: 2, cost: 30, status: "unlocked", desc: "Reinforced ribcage. Unlocks Lumberjack & Miner." },
+            { id: "s_f_3", icon: "🧟", name: "III. Draugr-Grafted", tier: 3, cost: 60, status: "available", desc: "Grafted Draugr muscles. +50% HP, wields Iron." },
+            { id: "s_f_4", icon: "👑", name: "IV. Crimson Lord", tier: 4, cost: 100, status: "locked", desc: "Immortal revenant. Summons ghost minions." }
+          ]
+        },
+        {
+          title: "🦴 Anatomy Grafts",
+          nodes: [
+            { id: "s_g_1", icon: "🐴", name: "Barrow-Mule", tier: 1, cost: 15, status: "unlocked", desc: "+100kg Carry Weight." },
+            { id: "s_g_2", icon: "✂️", name: "Scythe Digits", tier: 2, cost: 25, status: "unlocked", desc: "+30% Crop Harvest & Seed Retention." },
+            { id: "s_g_3", icon: "🐕", name: "Hound Skull", tier: 3, cost: 40, status: "available", desc: "Tracks hidden buried silver & crypt entrances." },
+            { id: "s_g_4", icon: "🧿", name: "Soul Phylactery", tier: 4, cost: 60, status: "locked", desc: "Instantly reforms at home coffin if destroyed." }
+          ]
+        }
+      ]
+    },
+
+    dvergr: {
+      name: "Sindri Deepdelver",
+      avatar: "⛏️",
+      badgeClass: "badge-dvergr",
+      badgeText: "Dvergr Artisan • Tier 4 Guild Master",
+      roleText: "Assigned Role: <b style='color:#FFF;'>Black Forge & Blast Furnace</b>",
+      level: 15,
+      xpText: "Guild Patronage: 6 / 6 Certifications (Master)",
+      xpPct: 100,
+      sp: 3,
+      hp: "210 / 210 HP",
+      hpPct: 100,
+      secLabel: "✨ Eitr Arcane Resonance",
+      secVal: "80 / 80 Eitr",
+      secPct: 100,
+      secFillClass: "fill-xp",
+      sustenanceHeader: "DVERGR GUILD PATRONAGE & LUXURY",
+      sustenanceSub: "Appeased by Gold, Ores & Mead",
+      foods: [
+        { icon: "🪙", name: "Guild Treasury (45 Coins)", timer: "LOCKED", stats: "High Dignity | Never does menial trash chores" },
+        { icon: "💎", name: "Carved Ruby Brooch", timer: "GIFTED", stats: "+25% Smelting Speed & Double Ingot Chance" },
+        { icon: "🍺", name: "Black Metal Brew", timer: "⏱️ 34:10", stats: "+50 Eitr | Complete Poison & Fire Resistance" }
+      ],
+      showPride: true,
+      prideVal: "96% (Honored Guild Master)",
+      pridePct: 96,
+      armor: "62.0",
+      weight: "185 / 450 kg",
+      weapon: "85 Blunt (Dvergr Demolisher)",
+      tool: "Blackmetal Pickaxe (Tier 4)",
+      bow: "75 Pierce (Dvergr Arbalest)",
+      block: "60 Block (Dvergr Buckler)",
+      speed: "108.0%",
+      efficiency: "160.0%",
+      warmth: "Dvergr Fire-Resistant Cloak",
+      tactical: "Rapidly extracts Flametal, Blackmetal & Silver. Fires explosive bolts when drakes or seekers attack.",
+      skills: [
+        { icon: "⛏️", name: "Deep Earth Mining", lvl: 75, xpCur: 90, xpNext: 76, bonus: "+37.5% Pickaxe Damage, +25% Bonus Precious Gems" },
+        { icon: "🔥", name: "Master Metallurgy", lvl: 68, xpCur: 45, xpNext: 69, bonus: "Operates Blast Furnaces at 2x speed, saves 30% coal" },
+        { icon: "🏹", name: "Arbalest Marksmanship", lvl: 54, xpCur: 30, xpNext: 55, bonus: "High precision crossbow snipes with knockback" },
+        { icon: "⚔️", name: "Warhammer Technique", lvl: 48, xpCur: 60, xpNext: 49, bonus: "Area slam staggers surrounding mobs" },
+        { icon: "🥾", name: "Underground Athletics", lvl: 40, xpCur: 15, xpNext: 41, bonus: "+450kg max weight inside subterranean crypts" },
+        { icon: "🛡️", name: "Rune Ward Craft", lvl: 38, xpCur: 55, xpNext: 39, bonus: "Emits shielding bubble protecting nearby allies" },
+        { icon: "🌾", name: "Mushroom Cultivation", lvl: 20, xpCur: 10, xpNext: 21, bonus: "Harvests Magecap and Jotun Puffs in Mistlands" },
+        { icon: "🪓", name: "Yggdrasil Woodcutting", lvl: 15, xpCur: 5, xpNext: 16, bonus: "Harvests Yggdrasil shoots with Blackmetal Axe" }
+      ],
+      treeTitle: "⛏️ DVERGR GUILD PATRONAGE & LUXURY MATRIX",
+      branches: [
+        {
+          title: "💎 Metallurgy & Forge",
+          nodes: [
+            { id: "d_m_1", icon: "⛏️", name: "Deep-Vein Survey", tier: 1, cost: 10, status: "unlocked", desc: "Detects hidden Silver and Flametal deposits." },
+            { id: "d_m_2", icon: "💎", name: "Gem Inlayer", tier: 2, cost: 25, status: "unlocked", desc: "Extracts Rubies and Sapphires without shattering." },
+            { id: "d_m_3", icon: "🔥", name: "Smelter Master", tier: 3, cost: 50, status: "unlocked", desc: "Doubles furnace capacity and cuts fuel consumption." },
+            { id: "d_m_4", icon: "🔨", name: "Black Forge Art", tier: 4, cost: 100, status: "unlocked", desc: "Repairs and optimizes Mistlands tier gear." }
+          ]
+        },
+        {
+          title: "✨ Eitr & Wardcraft",
+          nodes: [
+            { id: "d_e_1", icon: "🍺", name: "Eitr Brewer", tier: 1, cost: 20, status: "unlocked", desc: "Distills refined Eitr without arcane explosions." },
+            { id: "d_e_2", icon: "🛡️", name: "Dvergr Ward-Seal", tier: 2, cost: 50, status: "unlocked", desc: "Constructs protective wards preventing monster spawns." }
+          ]
+        }
+      ]
+    }
+  };
+
+  let selectedNodeData = profiles.human.branches[0].nodes[1];
+
+  function setHeritage(h) {
+    currentHeritage = h;
+    document.querySelectorAll('.control-bar .pill-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`btn-heritage-${h}`).classList.add('active');
+
+    const prof = profiles[h];
+    document.getElementById('worker-name').innerText = prof.name;
+    document.getElementById('avatar-icon').innerText = prof.avatar;
+    const badge = document.getElementById('worker-badge');
+    badge.className = `badge ${prof.badgeClass}`;
+    badge.innerText = prof.badgeText;
+    document.getElementById('worker-role-display').innerHTML = prof.roleText;
+    document.getElementById('worker-level-text').innerText = prof.xpText;
+    document.getElementById('worker-xp-fill').style.width = prof.xpPct + '%';
+    document.getElementById('worker-sp-text').innerText = prof.sp > 0 ? `★ ${prof.sp} SP` : "Max Tier";
+    document.getElementById('sp-bubble').innerText = prof.sp;
+    document.getElementById('sp-bubble').style.display = prof.sp > 0 ? 'flex' : 'none';
+
+    // Vitality
+    document.getElementById('hp-val').innerText = prof.hp;
+    document.getElementById('hp-fill').style.width = prof.hpPct + '%';
+    document.getElementById('sec-bar-label').innerText = prof.secLabel;
+    document.getElementById('sec-bar-val').innerText = prof.secVal;
+    const secFill = document.getElementById('sec-bar-fill');
+    secFill.className = `valheim-bar-fill ${prof.secFillClass}`;
+    secFill.style.width = prof.secPct + '%';
+
+    // Sustenance
+    document.getElementById('sustenance-header').innerText = prof.sustenanceHeader;
+    document.getElementById('sustenance-sub').innerText = prof.sustenanceSub;
+    const foodCont = document.getElementById('sustenance-slots-container');
+    foodCont.innerHTML = prof.foods.map(f => `
+      <div class="food-item">
+        <div class="food-icon">${f.icon}</div>
+        <div class="food-details">
+          <div class="food-title">
+            <span>${f.name}</span>
+            <span class="food-timer">${f.timer}</span>
+          </div>
+          <div class="food-stats">${f.stats}</div>
+        </div>
+      </div>
+    `).join('');
+
+    // Pride
+    const prideSec = document.getElementById('pride-section');
+    if (prof.showPride) {
+      prideSec.style.display = 'block';
+      document.getElementById('pride-val').innerText = prof.prideVal;
+      document.getElementById('pride-fill').style.width = prof.pridePct + '%';
+    } else {
+      prideSec.style.display = 'none';
+    }
+
+    // Stats
+    document.getElementById('attr-armor').innerText = prof.armor;
+    document.getElementById('attr-weight').innerText = prof.weight;
+    document.getElementById('attr-weapon').innerText = prof.weapon;
+    document.getElementById('attr-tool').innerText = prof.tool;
+    document.getElementById('attr-bow').innerText = prof.bow;
+    document.getElementById('attr-block').innerText = prof.block;
+    document.getElementById('attr-speed').innerText = prof.speed;
+    document.getElementById('attr-efficiency').innerText = prof.efficiency;
+    document.getElementById('attr-warmth').innerText = prof.warmth;
+    document.getElementById('tactical-summary').innerText = prof.tactical;
+
+    renderSkillsTab(prof.skills);
+    renderTreeTab(prof);
+    selectedNodeData = prof.branches[0].nodes[0];
+    inspectNode(selectedNodeData);
+  }
+
+  function switchTab(idx) {
+    currentTab = idx;
+    document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+    document.querySelectorAll('.tab-content').forEach((p, i) => p.classList.toggle('active', i === idx));
+    document.querySelectorAll('.icon-nav-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  }
+
+  function renderSkillsTab(skills) {
+    const listCont = document.getElementById('skills-list-container');
+    listCont.innerHTML = skills.map(s => `
+      <div class="skill-item-card">
+        <div class="skill-icon-box">${s.icon}</div>
+        <div class="skill-meta">
+          <h4>${s.name}</h4>
+          <span class="skill-lvl-badge">Level ${s.lvl} / 100</span>
+        </div>
+        <div class="skill-bars-col">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--valheim-silver);">
+            <span>Level Progress</span>
+            <span>XP: ${s.xpCur}% -> Lv. ${s.xpNext}</span>
+          </div>
+          <div class="valheim-bar">
+            <div class="valheim-bar-fill fill-xp" style="width:${s.xpCur}%;"></div>
+          </div>
+        </div>
+        <div class="skill-bonus-desc">
+          <b>Active Bonus:</b><br>${s.bonus}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderTreeTab(prof) {
+    document.getElementById('tree-title').innerText = prof.treeTitle;
+    document.getElementById('tree-sp-display').innerText = prof.sp > 0 ? `Available: ★ ${prof.sp} SP` : "Max Tier";
+
+    const colCont = document.getElementById('tree-columns-container');
+    colCont.innerHTML = prof.branches.map(b => `
+      <div class="tree-branch-col">
+        <div class="branch-header">${b.title}</div>
+        ${b.nodes.map((n, i) => `
+          <div class="tree-node ${n.status}" id="node-elem-${n.id}" onclick='selectNode(${JSON.stringify(n)})'>
+            <div class="node-icon">${n.icon}</div>
+            <div class="node-name">${n.name}</div>
+            <div class="node-cost">${n.status === 'unlocked' ? '✔ Learned' : (n.cost + ' SP')}</div>
+          </div>
+          ${i < b.nodes.length - 1 ? `<div class="tree-connector ${n.status === 'unlocked' ? 'active' : ''}"></div>` : ''}
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  function selectNode(node) {
+    selectedNodeData = node;
+    inspectNode(node);
+    document.querySelectorAll('.tree-node').forEach(el => el.classList.remove('selected'));
+    const target = document.getElementById(`node-elem-${node.id}`);
+    if (target) target.classList.add('selected');
+  }
+
+  function inspectNode(node) {
+    document.getElementById('node-insp-icon').innerText = node.icon;
+    document.getElementById('node-insp-title').innerText = node.name;
+    document.getElementById('node-insp-desc').innerText = node.desc;
+    document.getElementById('node-insp-cost').innerText = node.cost > 0 ? `${node.cost} Skill Points` : "Free Tier 1";
+
+    const btn = document.getElementById('node-insp-btn');
+    const statusText = document.getElementById('node-insp-status');
+
+    if (node.status === 'unlocked') {
+      statusText.innerHTML = '<span style="color:#5BB347;">✔ ALREADY LEARNED</span>';
+      btn.innerText = "SKILL UNLOCKED";
+      btn.disabled = true;
+    } else if (node.status === 'available') {
+      statusText.innerHTML = '<span style="color:#FFBF1F;">★ AVAILABLE TO LEARN</span>';
+      btn.innerText = `LEARN SKILL (${node.cost} SP)`;
+      btn.disabled = false;
+    } else {
+      statusText.innerHTML = '<span style="color:#B8B0A4;">🔒 REQUIRES PREREQUISITES</span>';
+      btn.innerText = "PREREQUISITE LOCKED";
+      btn.disabled = true;
+    }
+  }
+
+  function unlockCurrentSelectedNode() {
+    if (!selectedNodeData || selectedNodeData.status !== 'available') return;
+    const prof = profiles[currentHeritage];
+    if (prof.sp >= selectedNodeData.cost) {
+      prof.sp -= selectedNodeData.cost;
+      selectedNodeData.status = 'unlocked';
+      setHeritage(currentHeritage);
+      selectNode(selectedNodeData);
+      alert(`★ Success! ${selectedNodeData.name} learned!`);
+    } else {
+      alert("Not enough Skill Points!");
+    }
+  }
+
+  // Populate Backpack slots
+  function initBackpack() {
+    const grid = document.getElementById('backpack-grid');
+    const sampleItems = [
+      { icon: "🪓", count: "", eq: true, name: "Blackmetal Axe" },
+      { icon: "🛡️", count: "", eq: true, name: "Banded Shield" },
+      { icon: "🪖", count: "", eq: true, name: "Iron Helmet" },
+      { icon: "🧥", count: "", eq: true, name: "Iron Chest" },
+      { icon: "👖", count: "", eq: true, name: "Iron Greaves" },
+      { icon: "🏹", count: "", eq: true, name: "Huntsman Bow" },
+      { icon: "🎯", count: "64", eq: true, name: "Ironhead Arrows" },
+      { icon: "🧣", count: "", eq: true, name: "Wolf Cape" },
+      { icon: "🪵", count: "50", eq: false, name: "Wood" },
+      { icon: "🪵", count: "50", eq: false, name: "FineWood" },
+      { icon: "⛏️", count: "", eq: false, name: "Iron Pickaxe" },
+      { icon: "🥩", count: "10", eq: false, name: "Raw Lox Meat" },
+      { icon: "🍖", count: "8", eq: false, name: "Cooked Meat" },
+      { icon: "🥕", count: "25", eq: false, name: "Carrot" },
+      { icon: "🧅", count: "18", eq: false, name: "Onion" },
+      { icon: "🪙", count: "45", eq: false, name: "Coins" }
+    ];
+
+    let html = "";
+    for (let i = 0; i < 32; i++) {
+      const it = sampleItems[i] || null;
+      if (it) {
+        html += `
+          <div class="inv-slot ${it.eq ? 'equipped' : ''}" title="${it.name} (Right-click to ${it.eq ? 'unequip' : 'equip'})">
+            <span>${it.icon}</span>
+            ${it.count ? `<span class="item-count">${it.count}</span>` : ''}
+          </div>
+        `;
+      } else {
+        html += `<div class="inv-slot" title="Empty Slot"></div>`;
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  function setViewMode(mode) {
+    document.getElementById('btn-mode-full').classList.toggle('active', mode === 'full');
+    document.getElementById('btn-mode-container').classList.toggle('active', mode === 'container');
+    const win = document.getElementById('main-window');
+    if (mode === 'container') {
+      win.style.maxWidth = '920px';
+      win.style.boxShadow = '0 0 50px rgba(0,0,0,0.95), 0 0 20px #EB8F0D44';
+    } else {
+      win.style.maxWidth = '1080px';
+      win.style.boxShadow = '0 10px 40px rgba(0,0,0,0.9)';
+    }
+  }
+
+  // Initialize
+  initBackpack();
+  setHeritage('human');
+</script>
+
+</body>
+</html>
