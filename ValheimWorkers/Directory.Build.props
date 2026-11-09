@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <ValheimPath Condition="'$(ValheimPath)' == ''">D:\Steam\steamapps\common\Valheim</ValheimPath>
+    <ValheimManaged Condition="'$(ValheimManaged)' == ''">$(ValheimPath)\valheim_Data\Managed</ValheimManaged>
+    <R2Profile Condition="'$(R2Profile)' == ''">$(APPDATA)\r2modmanPlus-local\Valheim\profiles\Default</R2Profile>
+    <BepInExCore Condition="'$(BepInExCore)' == ''">$(R2Profile)\BepInEx\core</BepInExCore>
+    <BepInExPlugins Condition="'$(BepInExPlugins)' == ''">$(R2Profile)\BepInEx\plugins</BepInExPlugins>
+  </PropertyGroup>
+</Project>
